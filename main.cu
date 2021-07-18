@@ -60,13 +60,13 @@ void hashTreeP
 {
 	//find location
 	uint64_t loc = blockIdx.x * blockDim.x + threadIdx.x;
-	loc = loc + startIdx[0];
+	loc = loc + startIdx[1];
 	//hash the message
 	SHA1(nodes[loc].hash,message,MESSAGE_SIZE);
 	//only one sibling in each group will proceed
 
 	printf("location : %ld\n",loc);
-	printf("arity: %d\n",arities[0]);
+	printf("arity: %d\n",arities[1]);
 	if (loc%arities[1] != 0)
 		return;
 	
@@ -119,6 +119,12 @@ int main(int argc,char **argv){
 		arities[i] = 3;
 	for (uint8_t i = num_threes+1;i<=height;i++)
 		arities[i] = 2;
+
+	printf("arities: ");
+	for (int i=0;i<=height;i++){
+		printf("%d",arities[i]);
+	}
+	printf("\n");
 
 	//determine start and end index for each level
 	//they are is used to navigate the tree
