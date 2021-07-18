@@ -60,7 +60,7 @@ void hashTreeP
 {
 	//find location
 	uint64_t loc = blockIdx.x * blockDim.x + threadIdx.x;
-	loc = loc + startIdx[1];
+	loc = loc + startIdx[0];
 	//hash the message
 	SHA1(nodes[loc].hash,message,MESSAGE_SIZE);
 	//only one sibling in each group will proceed
@@ -162,6 +162,7 @@ int main(int argc,char **argv){
 	cudaMalloc(&d_message,MESSAGE_SIZE*sizeof(UCHAR));
 	cudaMemcpy(d_message, message,MESSAGE_SIZE*sizeof(UCHAR),
 		cudaMemcpyHostToDevice);
+	
 	cudaMalloc(&d_nodes,(endIdx[0]+1)*sizeof(m_node));
 
 	cudaMalloc(&d_startIdx,(height+1)*sizeof(uint64_t));
@@ -173,7 +174,7 @@ int main(int argc,char **argv){
 		cudaMemcpyHostToDevice);
 
 	cudaMalloc(&d_arities,(height+1)*sizeof(uint8_t));
-	cudaMemcpy(d_arities,arities,(height+1)*sizeof(uint64_t),
+	cudaMemcpy(d_arities,arities,(height+1)*sizeof(uint8_t),
 		cudaMemcpyHostToDevice);
 
 	//execute kernel function
