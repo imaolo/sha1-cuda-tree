@@ -63,9 +63,20 @@ void hashTreeP
 	loc = loc + startIdx[0];
 	//hash the message
 	SHA1(nodes[loc].hash,message,MESSAGE_SIZE);
+
+	printf("leaf message: ");
+	for(int i=0;i<MESSAGE_SIZE;i++)
+		printf("%c",message[i]);
+	printf("\n");
+	printf("hash: ");
+	for (int i=0;i<HASH_SIZE;i++)
+		printf("%02x",nodes[loc].hash[i]);
+	
 	//only one sibling in each group will proceed
 	if (loc%arities[1] != 0)
 		return;
+
+
 
 	// main loop
 	uint64_t childIdx;
@@ -137,7 +148,7 @@ int main(int argc,char **argv){
 	//create the message string
 	UCHAR message[MESSAGE_SIZE];
 	for (int i=0;i<MESSAGE_SIZE;i++)
-		message[i] = 0;
+		message[i] = 'a';
 	//create the nodes tree
 	m_node *nodes = (m_node*)malloc((endIdx[0]+1)*sizeof(m_node));
 
