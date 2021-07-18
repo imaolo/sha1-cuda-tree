@@ -67,9 +67,8 @@ void hashTreeP
 	if (loc%arities[1] != 0)
 		return;
 
-	printf("Idx : %ld\narity: %d\n",loc,arities[1]);
 
-
+	loc = getParentIdx(loc,startIdx[0],startIdx[0],arities[1]);
 	// main loop
 	uint64_t childIdx;
 	for (uint8_t i = 1;i<=height;i++){
