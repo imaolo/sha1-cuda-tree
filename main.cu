@@ -63,12 +63,15 @@ void hashTreeP
 	loc = loc + startIdx[0];
 	//hash the message
 	SHA1(nodes[loc].hash,message,MESSAGE_SIZE);
+	printf("leaf: %ld\n", loc);
 	//only one sibling in each group will proceed
 	if (loc%arities[1] != 0)
 		return;
 
 
-	loc = getParentIdx(loc,startIdx[0],startIdx[0],arities[1]);
+	loc = getParentIdx(loc,startIdx[0],endIdx[0],arities[1]);
+	printf("parent: %ld\n",loc);
+
 	// main loop
 	uint64_t childIdx;
 	for (uint8_t i = 1;i<=height;i++){
