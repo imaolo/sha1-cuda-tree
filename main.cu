@@ -55,7 +55,7 @@ void hashTreeP
 	uint64_t *endIdx,
 	uint8_t  *arities,
 	uint8_t  height,
-	UCHAR    *message
+	const UCHAR    *message
 )
 {
 	//find location
@@ -63,20 +63,11 @@ void hashTreeP
 	loc = loc + startIdx[0];
 	//hash the message
 	SHA1(nodes[loc].hash,message,MESSAGE_SIZE);
-
-	printf("leaf message: ");
-	for(int i=0;i<MESSAGE_SIZE;i++)
-		printf("%c",message[i]);
-	printf("\n");
-	printf("hash: ");
-	for (int i=0;i<HASH_SIZE;i++)
-		printf("%02x",nodes[loc].hash[i]);
-	printf("\n");
-	
 	//only one sibling in each group will proceed
 	if (loc%arities[1] != 0)
 		return;
-
+	
+	printf("here\n");
 
 
 	// main loop
