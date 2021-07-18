@@ -61,6 +61,8 @@ void hashTreeP
 	//find location
 	uint64_t loc = blockIdx.x * blockDim.x + threadIdx.x;
 	loc = loc + startIdx[0];
+	if (loc > endIdx[0])
+		return;
 	//hash the message
 	SHA1(nodes[loc].hash,message,MESSAGE_SIZE);
 	nodes[loc].hashed = 1;
@@ -171,7 +173,10 @@ int main(int argc,char **argv){
 		cudaMemcpyHostToDevice);
 
 	//execute kernel function and extract the memory
-	hashTreeP<<<1,num_leaves>>>(
+	int blocks = (num_leaves/1024)+1;
+	int threads = num_leaves/blocks;
+	threads = threads + num_leaves - (blocks*threads);
+	hashTreeP<<<blocks,threads>>>(
 	 	d_nodes,
 	 	d_startIdx,
 	 	d_endIdx,
