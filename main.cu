@@ -66,7 +66,7 @@ void hashTreeP
 	//only one sibling in each group will proceed
 
 	printf("location : %ld\n",loc);
-	if (loc%arities[1] != 0)
+	if (loc%arities[0] != 0)
 		return;
 	
 	printf("here\n");
@@ -95,7 +95,7 @@ void hashTreeP
 			memcpy((buff+(j*HASH_SIZE)),nodes[childIdx+j].hash,HASH_SIZE);
 		SHA1(nodes[loc].hash,buff,HASH_SIZE*arities[i]);
 
-		if (i==height|| loc%arities[i+1] != 0 )
+		if (i==height|| loc%arities[i] != 0 )
 			return;
 		loc = getParentIdx(loc,startIdx[i],endIdx[i],arities[i+1]);
 	}
