@@ -16,7 +16,7 @@
 typedef unsigned char UCHAR;
 struct node {
 	UCHAR hash[HASH_SIZE];
-	//unsigned char data[MESSAGE_SIZE];
+	uint8_t hashed;
 };
 typedef struct node m_node;
 
@@ -63,6 +63,7 @@ void hashTreeP
 	loc = loc + startIdx[0];
 	//hash the message
 	SHA1(nodes[loc].hash,message,MESSAGE_SIZE);
+	nodes[loc].hashed = 1;
 	//only one sibling in each group will proceed
 	if (loc%arities[1] != 0)
 		return;
@@ -78,7 +79,7 @@ void hashTreeP
 		while (1){
 			flag = 0;
 			for (uint64_t j=childIdx;j<childIdx+arities[i];j++){
-				if(nodes[j].hash != NULL)//NEED TO FIX
+				if(nodes[j].hashed)
 					flag++;
 			}
 			if (flag == arities[i])
@@ -90,6 +91,7 @@ void hashTreeP
 		for (uint8_t j = 0;j<arities[i];j++)
 			memcpy((buff+(j*HASH_SIZE)),nodes[childIdx+j].hash,HASH_SIZE);
 		SHA1(nodes[loc].hash,buff,HASH_SIZE*arities[i]);
+		nodes[loc].hashed = 1;
 
 		if (i==height|| loc%arities[i+1] != 0 )
 			return;
@@ -141,6 +143,8 @@ int main(int argc,char **argv){
 		message[i] = 'a';
 	//create the nodes tree
 	m_node *nodes = (m_node*)malloc((endIdx[0]+1)*sizeof(m_node));
+	for (uint64_t i = 0;i<=endIdx[0];i++)
+		nodes[i].hashed = 0;
 
 	//allocate CudaMemory
 	m_node   *d_nodes;
