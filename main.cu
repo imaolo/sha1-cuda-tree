@@ -64,6 +64,8 @@ void hashTreeP
 	//hash the message
 	SHA1(nodes[loc].hash,message,MESSAGE_SIZE);
 	//only one sibling in each group will proceed
+
+	printf("location : %ld\n",loc);
 	if (loc%arities[1] != 0)
 		return;
 	
