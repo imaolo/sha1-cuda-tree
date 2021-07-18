@@ -71,6 +71,7 @@ void hashTreeP
 	printf("hash: ");
 	for (int i=0;i<HASH_SIZE;i++)
 		printf("%02x",nodes[loc].hash[i]);
+	printf("\n");
 	
 	//only one sibling in each group will proceed
 	if (loc%arities[1] != 0)
