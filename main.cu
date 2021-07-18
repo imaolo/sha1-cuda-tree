@@ -64,13 +64,12 @@ void hashTreeP
 	//hash the message
 	SHA1(nodes[loc].hash,message,MESSAGE_SIZE);
 	//only one sibling in each group will proceed
-
-	printf("location : %ld\n",loc);
-	printf("arity: %d\n",arities[1]);
+	printf("Idx : %ld\narity: %d\n",loc,arities[1]);
+	for (int i=0;i<HASH_SIZE;i++)
+		printf("%02x",nodes[loc].hash[i]);
+	printf("\n");
 	if (loc%arities[1] != 0)
 		return;
-	
-	printf("here\n");
 
 
 	// main loop
@@ -120,12 +119,6 @@ int main(int argc,char **argv){
 	for (uint8_t i = num_threes+1;i<=height;i++)
 		arities[i] = 2;
 
-	printf("arities: ");
-	for (int i=0;i<=height;i++){
-		printf("%d",arities[i]);
-	}
-	printf("\n");
-
 	//determine start and end index for each level
 	//they are is used to navigate the tree
 	uint64_t startIdx[height+1];
@@ -162,7 +155,7 @@ int main(int argc,char **argv){
 	cudaMalloc(&d_message,MESSAGE_SIZE*sizeof(UCHAR));
 	cudaMemcpy(d_message, message,MESSAGE_SIZE*sizeof(UCHAR),
 		cudaMemcpyHostToDevice);
-	
+
 	cudaMalloc(&d_nodes,(endIdx[0]+1)*sizeof(m_node));
 
 	cudaMalloc(&d_startIdx,(height+1)*sizeof(uint64_t));
@@ -178,6 +171,7 @@ int main(int argc,char **argv){
 		cudaMemcpyHostToDevice);
 
 	//execute kernel function
+	printf("Entering Kernel\n");
 	hashTreeP<<<1,num_leaves>>>(
 	 	d_nodes,
 	 	d_startIdx,
@@ -187,6 +181,7 @@ int main(int argc,char **argv){
 	 	d_message
 	);
 	cudaDeviceSynchronize();
+	printf("Exited Kernel\n");
 	cudaMemcpy(nodes,d_nodes,(endIdx[0]+1)*sizeof(m_node),
 		cudaMemcpyDeviceToHost);
 
