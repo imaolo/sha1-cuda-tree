@@ -63,15 +63,11 @@ void hashTreeP
 	loc = loc + startIdx[0];
 	//hash the message
 	SHA1(nodes[loc].hash,message,MESSAGE_SIZE);
-	printf("leaf: %ld\n", loc);
 	//only one sibling in each group will proceed
 	if (loc%arities[1] != 0)
 		return;
-
-
+	//move on from the bottom level
 	loc = getParentIdx(loc,startIdx[0],endIdx[0],arities[1]);
-	printf("parent: %ld\n",loc);
-
 	// main loop
 	uint64_t childIdx;
 	for (uint8_t i = 1;i<=height;i++){
@@ -170,8 +166,7 @@ int main(int argc,char **argv){
 	cudaMemcpy(d_arities,arities,(height+1)*sizeof(uint8_t),
 		cudaMemcpyHostToDevice);
 
-	//execute kernel function
-	printf("Entering Kernel\n");
+	//execute kernel function and extract the memory
 	hashTreeP<<<1,num_leaves>>>(
 	 	d_nodes,
 	 	d_startIdx,
@@ -181,7 +176,6 @@ int main(int argc,char **argv){
 	 	d_message
 	);
 	cudaDeviceSynchronize();
-	printf("Exited Kernel\n");
 	cudaMemcpy(nodes,d_nodes,(endIdx[0]+1)*sizeof(m_node),
 		cudaMemcpyDeviceToHost);
 
