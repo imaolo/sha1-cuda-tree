@@ -64,12 +64,10 @@ void hashTreeP
 	//hash the message
 	SHA1(nodes[loc].hash,message,MESSAGE_SIZE);
 	//only one sibling in each group will proceed
-	printf("Idx : %ld\narity: %d\n",loc,arities[1]);
-	for (int i=0;i<HASH_SIZE;i++)
-		printf("%02x",nodes[loc].hash[i]);
-	printf("\n");
 	if (loc%arities[1] != 0)
 		return;
+
+	printf("Idx : %ld\narity: %d\n",loc,arities[1]);
 
 
 	// main loop
