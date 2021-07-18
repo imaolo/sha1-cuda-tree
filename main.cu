@@ -174,9 +174,7 @@ int main(int argc,char **argv){
 
 	//execute kernel function and extract the memory
 	int blocks = (num_leaves/1024)+1;
-	int threads = num_leaves/blocks;
-	threads = threads + num_leaves - (blocks*threads);
-	hashTreeP<<<blocks,threads>>>(
+	hashTreeP<<<blocks,1024>>>(
 	 	d_nodes,
 	 	d_startIdx,
 	 	d_endIdx,
