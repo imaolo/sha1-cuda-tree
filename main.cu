@@ -35,7 +35,7 @@ void printTree(
 {
 
 	printf("level: %d,",  height);
-	printf("nodes: %ld\n,", endIdx[height] - startIdx[height] + 1);
+	printf("nodes: %ld\n", endIdx[height] - startIdx[height] + 1);
 	for (uint64_t i=startIdx[height];i<=endIdx[height];i++)
 		printHash(nodes[i].hash);
 	printf("\n");
