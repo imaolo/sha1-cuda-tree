@@ -173,7 +173,7 @@ int main(int argc,char **argv){
 		cudaMemcpyHostToDevice);
 
 	//execute kernel function and extract the memory
-	int blocks = (num_leaves/1024)+1;
+	uint64_t blocks = (num_leaves/1024)+1;
 	hashTreeP<<<blocks,1024>>>(
 	 	d_nodes,
 	 	d_startIdx,
