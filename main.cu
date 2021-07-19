@@ -71,7 +71,7 @@ void hashTreeP
 		memcpy(nodes[childIdx+i].hash,(buffer+(i*HASH_SIZE)),HASH_SIZE);
 	}
 	//hash the concatenations together
-	SHA1(nodes[curr].hash,buffer,MESSAGE_SIZE*arities[1]);
+	SHA1(nodes[curr].hash,buffer,HASH_SIZE*arities[1]);
 	//only one sibling moves to the parent
 	if (curr%arities[curr] != 0)
 		return;
