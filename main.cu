@@ -16,7 +16,6 @@
 typedef unsigned char UCHAR;
 struct node {
 	UCHAR hash[HASH_SIZE];
-	uint8_t hashed;
 };
 typedef struct node m_node;
 
@@ -58,46 +57,40 @@ void hashTreeP
 	const UCHAR    *message
 )
 {
-	//find location
-	uint64_t loc = blockIdx.x * blockDim.x + threadIdx.x;
-	loc = loc + startIdx[0];
-	if (loc > endIdx[0])
+	//create a buffer that will be used several times;
+	UCHAR buffer[HASH_SIZE*MAX_ARITY];
+	//find location and set currIdx and childIdx
+	uint64_t curr = blockIdx.x * blockDim.x + threadIdx.x;
+	curr += startIdx[1];
+	uint64_t childIdx = getChildIdx(curr,startIdx[1],endIdx[1],arities[1]);
+	//hash children and store the concatenated results in the buff
+	for (uint8_t i = 0;i<arities[1];i++){
+		SHA1((buffer+(i*HASH_SIZE)),message,MESSAGE_SIZE);
+		memcpy(nodes[childIdx+i].hash,(buffer+(i*HASH_SIZE)),MESSAGE_SIZE);
+	}
+	//hash the concatenations together
+	SHA1(nodes[curr].hash,buffer,MESSAGE_SIZE*arities[1]);
+	//only one sibling moves to the parent
+	if (curr%arities[curr] != 0)
 		return;
-	//hash the message
-	SHA1(nodes[loc].hash,message,MESSAGE_SIZE);
-	nodes[loc].hashed = 1;
-	//only one sibling in each group will proceed
-	if (loc%arities[1] != 0)
-		return;
-	//move on from the bottom level
-	loc = getParentIdx(loc,startIdx[0],endIdx[0],arities[1]);
-	// main loop
-	uint64_t childIdx;
-	for (uint8_t i = 1;i<=height;i++){
-		//find the first child index
-		childIdx = getChildIdx(loc,startIdx[i],endIdx[i],arities[i]);
-		//waits for the children to complete hashing
-		uint8_t flag;
-		while (1){
-			flag = 0;
-			for (uint64_t j=childIdx;j<childIdx+arities[i];j++){
-				if(nodes[j].hashed)
-					flag++;
-			}
-			if (flag == arities[i])
-				break;
-		}
 
-		//hash the children's hashes and copy into the curr hash
-		UCHAR buff[MAX_ARITY*HASH_SIZE];
-		for (uint8_t j = 0;j<arities[i];j++)
-			memcpy((buff+(j*HASH_SIZE)),nodes[childIdx+j].hash,HASH_SIZE);
-		SHA1(nodes[loc].hash,buff,HASH_SIZE*arities[i]);
-		nodes[loc].hashed = 1;
+	//go to the parent node, now at level 2, save the child index
+	childIdx = curr;
+	curr = getParentIdx(curr,startIdx[1],endIdx[1],arities[2]);
 
-		if (i==height|| loc%arities[i+1] != 0 )
+	//iterate through the tree
+	for (uint8_t i=2;i<=height;i++){
+		//concat the children
+		for (uint8_t j=0;j<arities[i];j++)
+			memcpy((buffer+(j*HASH_SIZE)),nodes[childIdx+j].hash,HASH_SIZE);
+		//hash the concatenations
+		SHA1(nodes[curr].hash,buffer,HASH_SIZE*arities[i]);
+		//only one sibling continues
+		if (curr%arities[curr] != 0 | i == height)
 			return;
-		loc = getParentIdx(loc,startIdx[i],endIdx[i],arities[i+1]);
+		//move onto next level
+		childIdx = curr;
+		curr = getParentIdx(curr,startIdx[i],endIdx[i],arities[i+1]);
 	}
 }
 
@@ -106,7 +99,8 @@ int main(int argc,char **argv){
 		printf("enter correct args\n");
 		return 0;
 	}
-	//find the arities
+
+	//calculate the arities
 	const uint64_t num_blocks = atoi(argv[1]);
 	const uint8_t  height     = ceil(log10(num_blocks)/log10(3));
 	const uint8_t  num_twos   = log10(num_blocks/pow(3,height))/log10(2.0f/3.0f);
@@ -145,8 +139,6 @@ int main(int argc,char **argv){
 		message[i] = 'a';
 	//create the nodes tree
 	m_node *nodes = (m_node*)malloc((endIdx[0]+1)*sizeof(m_node));
-	for (uint64_t i = 0;i<=endIdx[0];i++)
-		nodes[i].hashed = 0;
 
 	//allocate CudaMemory
 	m_node   *d_nodes;
@@ -173,8 +165,8 @@ int main(int argc,char **argv){
 		cudaMemcpyHostToDevice);
 
 	//execute kernel function and extract the memory
-	uint64_t blocks = (num_leaves/1024)+1;
-	hashTreeP<<<blocks,1024>>>(
+	uint64_t N = endIdx[1] - startIdx[1] + 1;
+	hashTreeP<<< ( (N+255)/256 ) , 256 >>>(
 	 	d_nodes,
 	 	d_startIdx,
 	 	d_endIdx,
@@ -196,3 +188,57 @@ int main(int argc,char **argv){
 	free(nodes);
 	return 0;
 }
+
+// __global__ 
+// void hashTreeP 
+// (
+// 	m_node   *nodes,
+// 	uint64_t *startIdx,
+// 	uint64_t *endIdx,
+// 	uint8_t  *arities,
+// 	uint8_t  height,
+// 	const UCHAR    *message
+// )
+// {
+// 	//find location
+// 	uint64_t loc = blockIdx.x * blockDim.x + threadIdx.x;
+// 	loc = loc + startIdx[0];
+// 	if (loc > endIdx[0])
+// 		return;
+// 	//hash the message
+// 	SHA1(nodes[loc].hash,message,MESSAGE_SIZE);
+// 	nodes[loc].hashed = 1;
+// 	//only one sibling in each group will proceed
+// 	if (loc%arities[1] != 0)
+// 		return;
+// 	//move on from the bottom level
+// 	loc = getParentIdx(loc,startIdx[0],endIdx[0],arities[1]);
+// 	// main loop
+// 	uint64_t childIdx;
+// 	for (uint8_t i = 1;i<=height;i++){
+// 		//find the first child index
+// 		childIdx = getChildIdx(loc,startIdx[i],endIdx[i],arities[i]);
+// 		//waits for the children to complete hashing
+// 		uint8_t flag;
+// 		while (1){
+// 			flag = 0;
+// 			for (uint64_t j=childIdx;j<childIdx+arities[i];j++){
+// 				if(nodes[j].hashed == 1)
+// 					flag++;
+// 			}
+// 			if (flag == arities[i])
+// 				break;
+// 		}
+
+// 		//hash the children's hashes and copy into the curr hash
+// 		UCHAR buff[MAX_ARITY*HASH_SIZE];
+// 		for (uint8_t j = 0;j<arities[i];j++)
+// 			memcpy((buff+(j*HASH_SIZE)),nodes[childIdx+j].hash,HASH_SIZE);
+// 		SHA1(nodes[loc].hash,buff,HASH_SIZE*arities[i]);
+// 		nodes[loc].hashed = 1;
+
+// 		if (i==height|| loc%arities[i+1] != 0 )
+// 			return;
+// 		loc = getParentIdx(loc,startIdx[i],endIdx[i],arities[i+1]);
+// 	}
+// }
