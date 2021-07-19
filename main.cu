@@ -86,6 +86,7 @@ void hashTreeP
 		for (uint8_t j=0;j<arities[i];j++){
 			while (nodes[childIdx+j].hashed != 1){}
 			memcpy((buffer+(j*HASH_SIZE)),nodes[childIdx+j].hash,HASH_SIZE);
+		
 		}
 		for (int j=0;j<arities[i];j++){
 			if (nodes[childIdx+j].hashed == 0)
@@ -189,7 +190,7 @@ int main(int argc,char **argv){
 	cudaMemcpy(nodes,d_nodes,(endIdx[0]+1)*sizeof(m_node),
 		cudaMemcpyDeviceToHost);
 	
-	//printTree(nodes,startIdx,endIdx,height);
+	printHash(nodes[0].hash);
 
 	cudaFree(d_nodes);
 	cudaFree(d_message);
