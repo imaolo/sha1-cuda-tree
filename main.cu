@@ -85,15 +85,15 @@ void hashTreeP
 		//wait for the children to be hashed
 		switch (arities[i]){
 			case 2:
-				while(
-					nodes[childIdx].hashed != 1 &&
-					nodes[childIdx+1].hashed != 1){}
+				while(!(
+					nodes[childIdx].hashed   == 1 &&
+					nodes[childIdx+1].hashed == 1)){}
 				break;
 			case 3:
-				while(
-					nodes[childIdx].hashed != 1 &&
-					nodes[childIdx+1].hashed != 1 &&
-					nodes[childIdx+2].hashed != 1){}
+				while(!(
+					nodes[childIdx].hashed   == 1 &&
+					nodes[childIdx+1].hashed == 1 &&
+					nodes[childIdx+2].hashed == 1)){}
 				break;
 		}
 
