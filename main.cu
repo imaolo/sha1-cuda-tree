@@ -74,9 +74,8 @@ void hashTreeP
 	SHA1(nodes[curr].hash,buffer,HASH_SIZE*arities[1]);
 	//only one sibling moves to the parent
 	if (curr%arities[curr] != 0){
-		printf("curr: %ld\n,"curr);
+		printf("curr: %ld\n",curr);
 		printf("arity: %d\n\n",arities[curr]);
-		printf("rejjected\n");
 		return;
 	}
 
