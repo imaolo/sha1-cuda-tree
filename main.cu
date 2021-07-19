@@ -97,7 +97,9 @@ void hashTreeP
 		// 		break;
 		// }
 		for (uint8_t j=0;j<arities[i];j++){
-			while(nodes[childIdx+j].hashed != 1){}
+			while(nodes[childIdx+j].hashed != 1){
+				printf("in this hoe\n");
+			}
 		}
 		// uint8_t flag;
 		// while(1){
