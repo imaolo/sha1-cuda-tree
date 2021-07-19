@@ -81,7 +81,10 @@ void hashTreeP
 	curr = getParentIdx(curr,startIdx[1],endIdx[1],arities[2]);
 
 	//iterate through the tree
+	printf("entering loop\n");
 	for (uint8_t i=2;i<=height;i++){
+		printf("curr: %ld\n",curr);
+		printf("child: %ld\n\n",childIdx);
 		//concat the children
 		for (uint8_t j=0;j<arities[i];j++)
 			memcpy((buffer+(j*HASH_SIZE)),nodes[childIdx+j].hash,HASH_SIZE);
