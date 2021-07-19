@@ -93,6 +93,10 @@ void hashTreeP
 			if(flag == arities[i])
 				break;
 		}
+		for (int j=0;j<arities[i];j++){
+			if (nodes[childIdx+j].hashed == 0)
+				printf("oh no\n");
+		}
 		//concat the children
 		for (uint8_t j=0;j<arities[i];j++)
 			memcpy((buffer+(j*HASH_SIZE)),nodes[childIdx+j].hash,HASH_SIZE);
