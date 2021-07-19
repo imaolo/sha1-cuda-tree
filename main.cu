@@ -73,9 +73,7 @@ void hashTreeP
 	//hash the concatenations together
 	SHA1(nodes[curr].hash,buffer,HASH_SIZE*arities[1]);
 	//only one sibling moves to the parent
-	if (curr%arities[curr] != 0){
-		printf("curr: %ld\n",curr);
-		printf("arity: %d\n\n",arities[curr]);
+	if (curr%arities[1] != 0){
 		return;
 	}
 
@@ -94,7 +92,7 @@ void hashTreeP
 		//hash the concatenations
 		SHA1(nodes[curr].hash,buffer,HASH_SIZE*arities[i]);
 		//only one sibling continues
-		if (curr%arities[curr] != 0 | curr == 0)
+		if (curr%arities[i] != 0 | curr == 0)
 			return;
 		//move onto next level
 		curr = getParentIdx(curr,startIdx[i],endIdx[i],arities[i+1]);
