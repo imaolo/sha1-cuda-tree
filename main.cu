@@ -91,7 +91,7 @@ void hashTreeP
 		//hash the concatenations
 		SHA1(nodes[curr].hash,buffer,HASH_SIZE*arities[i]);
 		//only one sibling continues
-		if (curr%arities[i+1] != 0 | curr == 0)
+		if (curr == 0  | curr%arities[i+1] != 0 |)
 			return;
 		//move onto next level
 		curr = getParentIdx(curr,startIdx[i],endIdx[i],arities[i+1]);
