@@ -33,8 +33,6 @@ void printTree(
 	uint8_t         height 
 )
 {
-	if (height < 1)
-		return;
 
 	printf("level: %d,",  height);
 	printf("nodes: %ld\n", endIdx[height] - startIdx[height] + 1);
@@ -73,6 +71,7 @@ void hashTreeP
 	}
 	//hash the concatenations together
 	SHA1(nodes[curr].hash,buffer,HASH_SIZE*arities[1]);
+	nodes[curr].hashed = 1;
 	//only one sibling moves to the parent
 	if (curr%arities[2] != 0)
 		return;
@@ -94,6 +93,12 @@ void hashTreeP
 			if(flag = arities[i])
 				break;
 		}
+		for (uint8_t j=0;j<arities[i];j++){
+			if (nodes[childIdx+j].hashed==0)
+				printf("oh no");
+		}
+
+
 		//concat the children
 		for (uint8_t j=0;j<arities[i];j++)
 			memcpy((buffer+(j*HASH_SIZE)),nodes[childIdx+j].hash,HASH_SIZE);
@@ -193,7 +198,7 @@ int main(int argc,char **argv){
 	cudaMemcpy(nodes,d_nodes,(endIdx[0]+1)*sizeof(m_node),
 		cudaMemcpyDeviceToHost);
 
-	printTree(nodes,startIdx,endIdx,height);
+	//printTree(nodes,startIdx,endIdx,height);
 
 	cudaFree(d_nodes);
 	cudaFree(d_message);
