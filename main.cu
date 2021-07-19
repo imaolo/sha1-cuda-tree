@@ -33,7 +33,7 @@ void printTree(
 	uint8_t         height 
 )
 {
-	if (height < 4)
+	if (height < 3)
 		return;
 
 	printf("level: %d,",  height);
