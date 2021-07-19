@@ -93,12 +93,6 @@ void hashTreeP
 			if(flag == arities[i])
 				break;
 		}
-		for (uint8_t j=0;j<arities[i];j++){
-			if (nodes[childIdx+j].hashed==0)
-				printf("oh no");
-		}
-
-
 		//concat the children
 		for (uint8_t j=0;j<arities[i];j++)
 			memcpy((buffer+(j*HASH_SIZE)),nodes[childIdx+j].hash,HASH_SIZE);
@@ -185,6 +179,7 @@ int main(int argc,char **argv){
 		cudaMemcpyHostToDevice);
 
 	//execute kernel function and extract the memory
+	printf("Kernel Working... \n");
 	uint64_t N = endIdx[1] - startIdx[1] + 1;
 	hashTreeP<<< ( (N+255)/256 ) , 256 >>>(
 	 	d_nodes,
@@ -197,8 +192,8 @@ int main(int argc,char **argv){
 	cudaDeviceSynchronize();
 	cudaMemcpy(nodes,d_nodes,(endIdx[0]+1)*sizeof(m_node),
 		cudaMemcpyDeviceToHost);
-
-	//printTree(nodes,startIdx,endIdx,height);
+	
+	printTree(nodes,startIdx,endIdx,height);
 
 	cudaFree(d_nodes);
 	cudaFree(d_message);
