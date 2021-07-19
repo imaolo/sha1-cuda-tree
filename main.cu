@@ -83,20 +83,20 @@ void hashTreeP
 	for (uint8_t i=2;i<=height;i++){
 		childIdx = getChildIdx(curr,startIdx[i],endIdx[i],arities[i]);
 		//wait for the children to be hashed
-		uint8_t flag;
-		while(1){
-			flag = 0;
-			for (uint8_t j=0;j<arities[i];j++){
-				if (nodes[childIdx+j].hashed==1)
-					flag++;
-			}
-			if(flag == arities[i])
-				break;
-		}
-		for (int j=0;j<arities[i];j++){
-			if (nodes[childIdx+j].hashed == 0)
-				printf("oh no\n");
-		}
+		// uint8_t flag;
+		// while(1){
+		// 	flag = 0;
+		// 	for (uint8_t j=0;j<arities[i];j++){
+		// 		if (nodes[childIdx+j].hashed==1)
+		// 			flag++;
+		// 	}
+		// 	if(flag == arities[i])
+		// 		break;
+		// }
+		// for (int j=0;j<arities[i];j++){
+		// 	if (nodes[childIdx+j].hashed == 0)
+		// 		printf("oh no\n");
+		// }
 		//concat the children
 		for (uint8_t j=0;j<arities[i];j++)
 			memcpy((buffer+(j*HASH_SIZE)),nodes[childIdx+j].hash,HASH_SIZE);
