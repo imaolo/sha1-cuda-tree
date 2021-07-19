@@ -62,6 +62,9 @@ void hashTreeP
 	//find location and set currIdx and childIdx
 	uint64_t curr = blockIdx.x * blockDim.x + threadIdx.x;
 	curr += startIdx[1];
+	printf("location: %ld\n",curr);
+	if (curr>endIdx[1])
+		return;
 	uint64_t childIdx = getChildIdx(curr,startIdx[1],endIdx[1],arities[1]);
 	//hash children and store the concatenated results in the buff
 	for (uint8_t i = 0;i<arities[1];i++){
