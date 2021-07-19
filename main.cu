@@ -77,12 +77,12 @@ void hashTreeP
 		return;
 
 	//go to the parent node, now at level 2, save the child index
-	childIdx = curr;
 	curr = getParentIdx(curr,startIdx[1],endIdx[1],arities[2]);
-
+	
 	//iterate through the tree
 	printf("entering loop\n");
 	for (uint8_t i=2;i<=height;i++){
+		childIdx = getChildIdx(curr,startIdx[i],endIdx[i],arities[i]);
 		printf("curr: %ld\n",curr);
 		printf("child: %ld\n\n",childIdx);
 		//concat the children
@@ -91,10 +91,9 @@ void hashTreeP
 		//hash the concatenations
 		SHA1(nodes[curr].hash,buffer,HASH_SIZE*arities[i]);
 		//only one sibling continues
-		if (curr%arities[curr] != 0 | i == height)
+		if (curr%arities[curr] != 0 | curr == 0)
 			return;
 		//move onto next level
-		childIdx = curr;
 		curr = getParentIdx(curr,startIdx[i],endIdx[i],arities[i+1]);
 	}
 }
