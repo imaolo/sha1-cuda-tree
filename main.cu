@@ -90,7 +90,7 @@ void hashTreeP
 				if (nodes[childIdx+j].hashed==1)
 					flag++;
 			}
-			if(flag = arities[i])
+			if(flag == arities[i])
 				break;
 		}
 		for (uint8_t j=0;j<arities[i];j++){
