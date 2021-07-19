@@ -64,12 +64,11 @@ void hashTreeP
 	curr += startIdx[1];
 	if (curr>endIdx[1])
 		return;
-	printf("location: %ld\n",curr);
 	uint64_t childIdx = getChildIdx(curr,startIdx[1],endIdx[1],arities[1]);
 	//hash children and store the concatenated results in the buff
 	for (uint8_t i = 0;i<arities[1];i++){
 		SHA1((buffer+(i*HASH_SIZE)),message,MESSAGE_SIZE);
-		memcpy(nodes[childIdx+i].hash,(buffer+(i*HASH_SIZE)),MESSAGE_SIZE);
+		memcpy(nodes[childIdx+i].hash,(buffer+(i*HASH_SIZE)),HASH_SIZE);
 	}
 	//hash the concatenations together
 	SHA1(nodes[curr].hash,buffer,MESSAGE_SIZE*arities[1]);
