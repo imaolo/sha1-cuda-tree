@@ -83,6 +83,20 @@ void hashTreeP
 	for (uint8_t i=2;i<=height;i++){
 		childIdx = getChildIdx(curr,startIdx[i],endIdx[i],arities[i]);
 		//wait for the children to be hashed
+		switch (arities[i]){
+			case 2:
+				while(
+					nodes[childIdx].hashed != 1 &&
+					nodes[childIdx+1].hashed != 1){}
+				break;
+			case 3:
+				while(
+					nodes[childIdx].hashed != 1 &&
+					nodes[childIdx+1].hashed != 1 &&
+					nodes[childIdx+2].hashed != 1){}
+				break;
+		}
+
 		// uint8_t flag;
 		// while(1){
 		// 	flag = 0;
