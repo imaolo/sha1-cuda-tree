@@ -56,12 +56,13 @@ void hashTreeP
 )
 {
 	UCHAR buffer[HASH_SIZE*MAX_ARITY];
+	m_node *childNode;
 	//find currIdx and childIdx
-	uint64_t curr = blockIdx.x * blockDim.x + threadIdx.x;
-	curr += startIdx[1];
-	if (curr>endIdx[1])
+	uint64_t currIdx = blockIdx.x * blockDim.x + threadIdx.x;
+	currIdx += startIdx[1];
+	if (currIdx>endIdx[1])
 		return;
-	uint64_t childIdx = getChildIdx(curr,startIdx[1],endIdx[1],arities[1]);
+	uint64_t childIdx = getChildIdx(currIdx,startIdx[1],endIdx[1],arities[1]);
 	//hash children and store the concatenated results in the buff
 	for (uint8_t i = 0;i<arities[1];i++){
 		SHA1((buffer+(i*HASH_SIZE)),message,MESSAGE_SIZE);
@@ -69,34 +70,32 @@ void hashTreeP
 		nodes[childIdx+i].hashed = 1;
 	}
 	//hash the concatenation
-	SHA1(nodes[curr].hash,buffer,HASH_SIZE*arities[1]);
-	nodes[curr].hashed = 1;
+	SHA1(nodes[currIdx].hash,buffer,HASH_SIZE*arities[1]);
+	nodes[currIdx].hashed = 1;
 	//only one sibling moves to the parent
-	if (curr%arities[2] != 0)
+	if (currIdx%arities[2] != 0)
 		return;
 	//go to the parent node
-	curr = getParentIdx(curr,startIdx[1],endIdx[1],arities[2]);
+	currIdx = getParentIdx(currIdx,startIdx[1],endIdx[1],arities[2]);
 
 	//move up the tree
 	for (uint8_t i=2;i<=height;i++){
-		childIdx = getChildIdx(curr,startIdx[i],endIdx[i],arities[i]);
+
+		childIdx = getChildIdx(currIdx,startIdx[i],endIdx[i],arities[i]);
+		childNode = nodes+childIdx;
 		//concat the children after they have been hashed
 		for (uint8_t j=0;j<arities[i];j++){
-			while (nodes[childIdx+j].hashed != 1){
-				printf("node: %ld,aritiy: %d,childIdx: %ld\n",
-					curr,arities[i],childIdx);
-			}
-			printf("children hashed\n");
+			while (childNode[j].hashed != 1){}
 			memcpy((buffer+(j*HASH_SIZE)),nodes[childIdx+j].hash,HASH_SIZE);
 		}
 		//hash the concatenations
-		SHA1(nodes[curr].hash,buffer,HASH_SIZE*arities[i]);
-		nodes[curr].hashed = 1;
+		SHA1(nodes[currIdx].hash,buffer,HASH_SIZE*arities[i]);
+		nodes[currIdx].hashed = 1;
 		//only one sibling continues
-		if (curr == 0  | curr%arities[i+1] != 0)
+		if (currIdx == 0  | currIdx%arities[i+1] != 0)
 			return;
 		//move onto next level
-		curr = getParentIdx(curr,startIdx[i],endIdx[i],arities[i+1]);
+		currIdx = getParentIdx(currIdx,startIdx[i],endIdx[i],arities[i+1]);
 	}
 }
 
