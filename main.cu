@@ -170,6 +170,7 @@ int main(int argc,char **argv){
 
 	//execute kernel function and extract the memory
 	printf("Memory allocated(nodes): %ld\n",((endIdx[0]+1)*sizeof(m_node)));
+	printf("nodes: %ld\n",endIdxp[0]+1);
 	printf("Memory allocated(startIDx): %ld\n",((height+1)*sizeof(uint64_t)));
 	printf("Kernel Working... \n");
 	uint64_t N = endIdx[1] - startIdx[1] + 1;
@@ -185,7 +186,7 @@ int main(int argc,char **argv){
 	cudaMemcpy(nodes,d_nodes,(endIdx[0]+1)*sizeof(m_node),
 		cudaMemcpyDeviceToHost);
 	
-	printTree(nodes,startIdx,endIdx,height);
+	//printTree(nodes,startIdx,endIdx,height);
 
 	cudaFree(d_nodes);
 	cudaFree(d_message);
