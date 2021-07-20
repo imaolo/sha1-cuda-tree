@@ -55,8 +55,7 @@ void hashTreeP
 	const UCHAR    *message
 )
 {
-	UCHAR buffer[HASH_SIZE*MAX_ARITY];
-	m_node *childNode;
+	UCHAR buffer[HASH_SIZE*MAX_ARITY]; 
 	//find currIdx and childIdx
 	uint64_t currIdx = blockIdx.x * blockDim.x + threadIdx.x;
 	currIdx += startIdx[1];
@@ -82,10 +81,12 @@ void hashTreeP
 	for (uint8_t i=2;i<=height;i++){
 
 		childIdx = getChildIdx(currIdx,startIdx[i],endIdx[i],arities[i]);
-		childNode = nodes+childIdx;
 		//concat the children after they have been hashed
 		for (uint8_t j=0;j<arities[i];j++){
-			while (childNode[j].hashed != 1){}
+			while (nodes[childIdx+j].hashed != 1){
+				printf("Level: %d\n",i);
+			}
+			printf("finito\n");
 			memcpy((buffer+(j*HASH_SIZE)),nodes[childIdx+j].hash,HASH_SIZE);
 		}
 		//hash the concatenations
