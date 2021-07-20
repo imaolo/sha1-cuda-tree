@@ -191,7 +191,7 @@ int main(int argc,char **argv){
 		cudaMemcpyDeviceToHost);
 	
 	//printHash(nodes[0].hash);
-	printTree(nodes,startIdx,endIdx,height);
+	//printTree(nodes,startIdx,endIdx,height);
 
 
 	cudaFree(d_nodes);
