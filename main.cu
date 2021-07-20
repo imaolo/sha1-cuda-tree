@@ -189,7 +189,7 @@ int main(int argc,char **argv){
 	cudaMemcpy(nodes,d_nodes,(endIdx[0]+1)*sizeof(m_node),
 		cudaMemcpyDeviceToHost);
 	
-	//printHash(nodes[0].hash);
+	printHash(nodes[0].hash);
 	//printTree(nodes,startIdx,endIdx,height);
 
 
