@@ -76,7 +76,7 @@ void hashTreeP
 		return;
 	//go to the parent node
 	curr = getParentIdx(curr,startIdx[1],endIdx[1],arities[2]);
-	
+
 	//move up the tree
 	for (uint8_t i=2;i<=height;i++){
 		childIdx = getChildIdx(curr,startIdx[i],endIdx[i],arities[i]);
@@ -169,7 +169,8 @@ int main(int argc,char **argv){
 		cudaMemcpyHostToDevice);
 
 	//execute kernel function and extract the memory
-	printf("Memory allocated: %ld\n",((endIdx[0]+1)*sizeof(m_node)));
+	printf("Memory allocated(nodes): %ld\n",((endIdx[0]+1)*sizeof(m_node)));
+	printf("Memory allocated(startIDx): %ld\n",((height+1)*sizeof(uint64_t)));
 	printf("Kernel Working... \n");
 	uint64_t N = endIdx[1] - startIdx[1] + 1;
 	hashTreeP<<< ( (N+255)/256 ) , 256 >>>(
