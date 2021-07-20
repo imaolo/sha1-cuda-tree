@@ -55,9 +55,8 @@ void hashTreeP
 	const UCHAR    *message
 )
 {
-	//create a buffer that will be used several times;
 	UCHAR buffer[HASH_SIZE*MAX_ARITY];
-	//find location and set currIdx and childIdx
+	//find currIdx and childIdx
 	uint64_t curr = blockIdx.x * blockDim.x + threadIdx.x;
 	curr += startIdx[1];
 	if (curr>endIdx[1])
@@ -69,31 +68,22 @@ void hashTreeP
 		memcpy(nodes[childIdx+i].hash,(buffer+(i*HASH_SIZE)),HASH_SIZE);
 		nodes[childIdx+i].hashed = 1;
 	}
-	//hash the concatenations together
+	//hash the concatenation
 	SHA1(nodes[curr].hash,buffer,HASH_SIZE*arities[1]);
 	nodes[curr].hashed = 1;
 	//only one sibling moves to the parent
 	if (curr%arities[2] != 0)
 		return;
-
-	//go to the parent node, now at level 2, save the child index
+	//go to the parent node
 	curr = getParentIdx(curr,startIdx[1],endIdx[1],arities[2]);
-
-	//iterate through the tree
+	
+	//move up the tree
 	for (uint8_t i=2;i<=height;i++){
 		childIdx = getChildIdx(curr,startIdx[i],endIdx[i],arities[i]);
 		//concat the children after they have been hashed
 		for (uint8_t j=0;j<arities[i];j++){
-			while (nodes[childIdx+j].hashed != 1){
-				printf("in this hoe\n");
-			}
-			printf("out this hoe\n");
+			while (nodes[childIdx+j].hashed != 1){}
 			memcpy((buffer+(j*HASH_SIZE)),nodes[childIdx+j].hash,HASH_SIZE);
-
-		}
-		for (int j=0;j<arities[i];j++){
-			if (nodes[childIdx+j].hashed == 0)
-				printf("oh no\n");
 		}
 		//hash the concatenations
 		SHA1(nodes[curr].hash,buffer,HASH_SIZE*arities[i]);
@@ -145,13 +135,13 @@ int main(int argc,char **argv){
 	}
 
 
-	//create the message string
+	//create the message string, should vary with message size
 	UCHAR message[MESSAGE_SIZE];
 	for (int i=0;i<MESSAGE_SIZE;i++)
 		message[i] = 'a';
-	//create the nodes tree
+	//create the nodes tree and initialize nodes
 	m_node *nodes = (m_node*)malloc((endIdx[0]+1)*sizeof(m_node));
-	for (uint64_t i =0;i<=endIdx[0];i++)
+	for (uint64_t i=0;i<=endIdx[0];i++)
 		nodes[i].hashed = 0;
 
 	//allocate CudaMemory
@@ -179,6 +169,7 @@ int main(int argc,char **argv){
 		cudaMemcpyHostToDevice);
 
 	//execute kernel function and extract the memory
+	printf("Memory allocated: %ld\n",((endIdx[0]+1)*sizeof(m_node)));
 	printf("Kernel Working... \n");
 	uint64_t N = endIdx[1] - startIdx[1] + 1;
 	hashTreeP<<< ( (N+255)/256 ) , 256 >>>(
