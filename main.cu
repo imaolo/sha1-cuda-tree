@@ -84,8 +84,11 @@ void hashTreeP
 		//concat the children after they have been hashed
 		for (uint8_t j=0;j<arities[i];j++){
 			while (nodes[childIdx+j].hashed != 1){}
+			if (nodes[childIdx+j].hashed != 1)
+				printf("oh no\n");
 			memcpy((buffer+(j*HASH_SIZE)),nodes[childIdx+j].hash,HASH_SIZE);
 		}
+		for ()
 		//hash the concatenations
 		SHA1(nodes[currIdx].hash,buffer,HASH_SIZE*arities[i]);
 		nodes[currIdx].hashed = 1;
