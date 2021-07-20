@@ -100,7 +100,7 @@ int main(int argc,char **argv){
 	if (argc != 2){
 		printf("enter correct args\n");
 		return 0;
-	}
+	}	
 
 	//calculate the arities
 	const uint64_t num_blocks = atoi(argv[1]);
@@ -120,7 +120,7 @@ int main(int argc,char **argv){
 	uint64_t startIdx[height+1];
 	uint64_t endIdx[height+1];
 	uint64_t nodes_at_level;
-	for (uint64_t i = height;i>=0; i--){
+	for (uint64_t i=height;i>=0; i--){
 		if (i == height){
 			startIdx[i] = 0;
 			nodes_at_level = 1;
@@ -135,7 +135,7 @@ int main(int argc,char **argv){
 	}
 
 
-	//create the message string, should vary with message size
+	//create the message string
 	UCHAR message[MESSAGE_SIZE];
 	for (int i=0;i<MESSAGE_SIZE;i++)
 		message[i] = 'a';
@@ -185,7 +185,7 @@ int main(int argc,char **argv){
 	cudaMemcpy(nodes,d_nodes,(endIdx[0]+1)*sizeof(m_node),
 		cudaMemcpyDeviceToHost);
 	
-	printHash(nodes[0].hash);
+	printTree(nodes,startIdx,endIdx,height);
 
 	cudaFree(d_nodes);
 	cudaFree(d_message);
