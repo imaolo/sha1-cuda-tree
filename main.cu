@@ -59,10 +59,10 @@ void hashTreeP
 	uint8_t block_size = blockDim.x;
 
 	for (uint64_t idx=thread; idx<N; idx+=block_size){
+		printf("entered loop at: %ld\n",idx);
 		for (uint8_t i=0;i<arities[1];i++)
 			SHA1((buffer+(i*HASH_SIZE)),message,MESSAGE_SIZE);
 		SHA1(nodes[idx].hash,buffer,MESSAGE_SIZE*arities[1]);
-		printf("leaf have been hashed\n");
 	}
 	__syncthreads();
 
