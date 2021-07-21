@@ -1,17 +1,10 @@
 #include <stdio.h>
+#include <time.h>
 #include "sha1.cu"
 
 #define MESSAGE_SIZE 1
 #define HASH_SIZE 20
 #define MAX_ARITY 3
-
-//use the current levels arity
-#define getChildIdx(index,start,end,arity)\
-	((index-start)*arity)+end+1;
-
-//the arity is the parents arity 
-#define getParentIdx(index,start,end,arity)\
-	start - ((end-start+1)/arity - ((index - start)/arity))
 
 typedef unsigned char UCHAR;
 struct node {
@@ -25,23 +18,7 @@ void printHash(const UCHAR *hash){
 		printf("%02x",hash[i]);
 	printf("\n");
 }
-void printTree(
-	const m_node   *nodes,
-	const uint64_t *startIdx, 
-	const uint64_t *endIdx,
-	uint8_t         height 
-)
-{
 
-	printf("level: %d,",  height);
-	printf("nodes: %ld\n", endIdx[height] - startIdx[height] + 1);
-	for (uint64_t i=startIdx[height];i<=endIdx[height];i++)
-		printHash(nodes[i].hash);
-	printf("\n");
-	if (height == 0)
-		return;
-	printTree(nodes,startIdx,endIdx,height-1);
-}
 
 __global__ 
 void hashTreeP 
@@ -135,6 +112,7 @@ int main(int argc,char **argv){
 
 	//execute kernel function and extract the memory
 	printf("Invoking Kernel\n");
+	double start = clock();
 	hashTreeP<<<1, 1024>>>(
 	 	d_nodes,
 	 	num_leaves/arities[1],
@@ -144,8 +122,10 @@ int main(int argc,char **argv){
 	 	d_message
 	);
 	cudaDeviceSynchronize();
+	printf("seconds: %4lf\n",(clock()-start)/CLOCKS_PER_SEC);
 	cudaMemcpy(nodes,d_nodes,(num_leaves/arities[1])*sizeof(m_node),
 		cudaMemcpyDeviceToHost);
+	
 	
 	printHash(nodes[0].hash);
 
