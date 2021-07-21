@@ -63,6 +63,11 @@ void hashTreeP
 		for (uint8_t i=0;i<arities[1];i++)
 			SHA1((buffer+(i*HASH_SIZE)),message,MESSAGE_SIZE);
 		SHA1(nodes[idx].hash,buffer,MESSAGE_SIZE*arities[1]);
+		if (idx == 0){
+			for (int i=0;i<HASH_SIZE;i++)
+				printf("%02x",nodes[idx].hash[i]);
+		}
+
 	}
 	__syncthreads();
 
