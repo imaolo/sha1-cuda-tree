@@ -69,6 +69,7 @@ void hashTreeP
 	for (uint8_t i=2;i<=height;i++){
 		for (uint64_t idx=thread;idx<N;idx+=block_size){
 			if (idx%offsets[i]==0){
+				printf("entered loop at: %ld\n",idx);
 				for (uint8_t j=0;j<arities[i];j++){
 					memcpy((buffer+(j*HASH_SIZE)),
 							nodes[idx+j*offsets[i-1]].hash,
