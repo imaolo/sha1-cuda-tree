@@ -55,11 +55,11 @@ void hashTreeP
 )
 {
 	UCHAR buffer[HASH_SIZE*MAX_ARITY];
-	uint8_t thread = threadIdx.x;
+	uint16_t thread = threadIdx.x;
 	uint8_t block_size = blockDim.x;
 
 	if (thread == 0)
-		printf("oh no\n");
+		printf("block%d");
 
 	for (uint64_t idx=thread; idx<N; idx+=block_size){
 		//printf("entered loop at: %ld\n",idx);
