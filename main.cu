@@ -68,7 +68,6 @@ void hashTreeP
 	for (uint8_t i=2;i<=height;i++){
 		for (uint64_t idx=thread;idx<N;idx+=block_size){
 			if (idx%offsets[i]==0){
-				printf("entered loop at: %ld\n",idx);
 				for (uint8_t j=0;j<arities[i];j++){
 					memcpy((buffer+(j*HASH_SIZE)),
 							nodes[idx+j*offsets[i-1]].hash,
@@ -135,7 +134,6 @@ int main(int argc,char **argv){
 		cudaMemcpyHostToDevice);
 
 	//execute kernel function and extract the memory
-	printf("N: %ld\n",num_leaves/arities[1]);
 	printf("Invoking Kernel\n");
 	hashTreeP<<<1, 1024>>>(
 	 	d_nodes,
