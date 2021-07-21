@@ -63,6 +63,7 @@ void hashTreeP
 			SHA1((buffer+(i*HASH_SIZE)),message,MESSAGE_SIZE);
 		SHA1(nodes[idx].hash,buffer,MESSAGE_SIZE*arities[1]);
 	}
+	printf("leaves have been hashed\n");
 	__syncthreads();
 
 	for (uint8_t i=2;i<=height;i++){
@@ -100,14 +101,12 @@ int main(int argc,char **argv){
 		arities[i] = 3;
 	for (uint8_t i = num_threes+1;i<=height;i++)
 		arities[i] = 2;
-
-	//determine the offset
+	//determine the offsets
 	//they are is used to interleave addresses
 	uint64_t offsets[height+1];
 	offsets[1] = 1;
 	for (uint8_t i=2;i<=height;i++)
 		offsets[i] = arities[i]*offsets[i-1];
-
 	//create the message string
 	UCHAR message[MESSAGE_SIZE];
 	for (int i=0;i<MESSAGE_SIZE;i++)
@@ -131,7 +130,7 @@ int main(int argc,char **argv){
 	cudaMemcpy(d_arities,arities,(height+1)*sizeof(uint8_t),
 		cudaMemcpyHostToDevice);
 
-	cudaMalloc(&d_offsets,(height+1)*sizeof(uint8_t));
+	cudaMalloc(&d_offsets,(height+1)*sizeof(uint64_t));
 	cudaMemcpy(d_offsets,offsets,(height+1)*sizeof(uint64_t),
 		cudaMemcpyHostToDevice);
 
