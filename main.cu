@@ -65,7 +65,8 @@ void hashTreeP
 		SHA1(nodes[idx].hash,buffer,MESSAGE_SIZE*arities[1]);
 		if (idx == 0){
 			for (int i=0;i<HASH_SIZE;i++)
-				printf("%02x",buffer[i]);	
+				printf("%02x",buffer[i+20]);
+			printf("\n");	
 		}
 
 	}
