@@ -62,8 +62,8 @@ void hashTreeP
 		for (uint8_t i=0;i<arities[1];i++)
 			SHA1((buffer+(i*HASH_SIZE)),message,MESSAGE_SIZE);
 		SHA1(nodes[idx].hash,buffer,MESSAGE_SIZE*arities[1]);
+		printf("leaf have been hashed\n");
 	}
-	printf("leaves have been hashed\n");
 	__syncthreads();
 
 	for (uint8_t i=2;i<=height;i++){
