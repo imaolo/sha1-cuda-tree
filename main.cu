@@ -135,6 +135,8 @@ int main(int argc,char **argv){
 		cudaMemcpyHostToDevice);
 
 	//execute kernel function and extract the memory
+	printf("N: %ld\n",num_leaves/arities[1]);
+	printf("Invoking Kernel\n");
 	hashTreeP<<<1, 1024>>>(
 	 	d_nodes,
 	 	num_leaves/arities[1],
