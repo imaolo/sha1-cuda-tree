@@ -16,7 +16,6 @@
 typedef unsigned char UCHAR;
 struct node {
 	UCHAR hash[HASH_SIZE];
-	volatile uint8_t hashed;
 };
 typedef struct node m_node;
 
@@ -48,55 +47,39 @@ __global__
 void hashTreeP 
 (
 	m_node   *nodes,
-	uint64_t *startIdx,
-	uint64_t *endIdx,
+	uint64_t N,
 	uint8_t  *arities,
+	uint64_t *offsets,
 	uint8_t  height,
 	const UCHAR    *message
 )
 {
-	UCHAR buffer[HASH_SIZE*MAX_ARITY]; 
-	//find currIdx and childIdx
-	uint64_t currIdx = blockIdx.x * blockDim.x + threadIdx.x;
-	currIdx += startIdx[1];
-	if (currIdx>endIdx[1])
-		return;
-	uint64_t childIdx = getChildIdx(currIdx,startIdx[1],endIdx[1],arities[1]);
-	//hash children and store the concatenated results in the buff
-	for (uint8_t i = 0;i<arities[1];i++){
-		SHA1((buffer+(i*HASH_SIZE)),message,MESSAGE_SIZE);
-		memcpy(nodes[childIdx+i].hash,(buffer+(i*HASH_SIZE)),HASH_SIZE);
-		nodes[childIdx+i].hashed = 1;
-	}
-	//hash the concatenation
-	SHA1(nodes[currIdx].hash,buffer,HASH_SIZE*arities[1]);
-	nodes[currIdx].hashed = 1;
-	//only one sibling moves to the parent
-	if (currIdx%arities[2] != 0)
-		return;
-	//go to the parent node
-	currIdx = getParentIdx(currIdx,startIdx[1],endIdx[1],arities[2]);
+	UCHAR buffer[HASH_SIZE*MAX_ARITY];
+	uint8_t thread = threadIdx.x;
+	uint8_t block_size = blockDim.x;
 
-	//move up the tree
+	for (uint64_t idx=thread; idx<N; idx+=block_size){
+		for (uint8_t i=0;i<arities[1];i++)
+			SHA1((buffer+(i*HASH_SIZE)),message,MESSAGE_SIZE);
+		SHA1(nodes[idx].hash,buffer,MESSAGE_SIZE*arities[1]);
+	}
+	__syncthreads();
+
 	for (uint8_t i=2;i<=height;i++){
+		for (uint64_t idx=thread;idx<N;idx+=block_size){
+			if (idx%offsets[i]==0){
+				for (uint8_t j=0;j<arities[i];j++){
+					memcpy((buffer+(j*HASH_SIZE)),
+							nodes[idx+j*offsets[i-1]].hash,
+							HASH_SIZE);
+				}
+				SHA1(nodes[idx].hash,buffer,HASH_SIZE*arities[i]);
+			}
+			__syncthreads();
 
-		childIdx = getChildIdx(currIdx,startIdx[i],endIdx[i],arities[i]);
-		//concat the children after they have been hashed
-		for (uint8_t j=0;j<arities[i];j++){
-			while (nodes[childIdx+j].hashed != 1){}
-			if (nodes[childIdx+j].hashed != 1)
-				printf("oh no\n");
-			memcpy((buffer+(j*HASH_SIZE)),nodes[childIdx+j].hash,HASH_SIZE);
 		}
-		//hash the concatenations
-		SHA1(nodes[currIdx].hash,buffer,HASH_SIZE*arities[i]);
-		nodes[currIdx].hashed = 1;
-		//only one sibling continues
-		if (currIdx == 0  | currIdx%arities[i+1] != 0)
-			return;
-		//move onto next level
-		currIdx = getParentIdx(currIdx,startIdx[i],endIdx[i],arities[i+1]);
 	}
+
 }
 
 int main(int argc,char **argv){
@@ -118,85 +101,59 @@ int main(int argc,char **argv){
 	for (uint8_t i = num_threes+1;i<=height;i++)
 		arities[i] = 2;
 
-	//determine start and end index for each level
-	//they are is used to navigate the tree
-	uint64_t startIdx[height+1];
-	uint64_t endIdx[height+1];
-	uint64_t nodes_at_level;
-	for (uint64_t i=height;i>=0; i--){
-		if (i == height){
-			startIdx[i] = 0;
-			nodes_at_level = 1;
-		}
-		else{
-			startIdx[i] = endIdx[i+1] + 1;
-			nodes_at_level = (endIdx[i+1] - startIdx[i+1] + 1 ) * arities[i+1];
-		}
-		endIdx[i] = startIdx[i] + nodes_at_level - 1;
-		if (i == 0)
-			break;
-	}
-
+	//determine the offset
+	//they are is used to interleave addresses
+	uint64_t offsets[height+1];
+	offsets[1] = 1;
+	for (uint8_t i=2;i<=height;i++)
+		offsets[i] = arities[i]*offsets[i-1];
 
 	//create the message string
 	UCHAR message[MESSAGE_SIZE];
 	for (int i=0;i<MESSAGE_SIZE;i++)
 		message[i] = 'a';
 	//create the nodes tree and initialize nodes
-	m_node *nodes = (m_node*)malloc((endIdx[0]+1)*sizeof(m_node));
-	for (uint64_t i=0;i<=endIdx[0];i++)
-		nodes[i].hashed = 0;
+	m_node *nodes = (m_node*)malloc((num_leaves/arities[1])*sizeof(m_node));
 
 	//allocate CudaMemory
 	m_node   *d_nodes;
 	UCHAR    *d_message;
-	uint64_t *d_startIdx,*d_endIdx;
 	uint8_t  *d_arities;
+	uint64_t *d_offsets;
 
 	cudaMalloc(&d_message,MESSAGE_SIZE*sizeof(UCHAR));
 	cudaMemcpy(d_message, message,MESSAGE_SIZE*sizeof(UCHAR),
 		cudaMemcpyHostToDevice);
 
-	cudaMalloc(&d_nodes,(endIdx[0]+1)*sizeof(m_node));
-
-	cudaMalloc(&d_startIdx,(height+1)*sizeof(uint64_t));
-	cudaMemcpy(d_startIdx, startIdx,(height+1)*sizeof(uint64_t),
-		cudaMemcpyHostToDevice);
-
-	cudaMalloc(&d_endIdx,(height+1)*sizeof(uint64_t));
-	cudaMemcpy(d_endIdx, endIdx,(height+1)*sizeof(uint64_t),
-		cudaMemcpyHostToDevice);
+	cudaMalloc(&d_nodes,(num_leaves/arities[1])*sizeof(m_node));
 
 	cudaMalloc(&d_arities,(height+1)*sizeof(uint8_t));
 	cudaMemcpy(d_arities,arities,(height+1)*sizeof(uint8_t),
 		cudaMemcpyHostToDevice);
 
+	cudaMalloc(&d_offsets,(height+1)*sizeof(uint8_t));
+	cudaMemcpy(d_offsets,offsets,(height+1)*sizeof(uint64_t),
+		cudaMemcpyHostToDevice);
+
 	//execute kernel function and extract the memory
-	printf("Memory allocated(nodes): %ld\n",((endIdx[0]+1)*sizeof(m_node)));
-	printf("nodes: %ld\n",endIdx[0]+1);
-	printf("Memory allocated(startIDx): %ld\n",((height+1)*sizeof(uint64_t)));
-	printf("Kernel Working... \n");
-	uint64_t N = endIdx[1] - startIdx[1] + 1;
-	hashTreeP<<< ( (N+255)/256 ) , 256 >>>(
+	hashTreeP<<<1, 1024>>>(
 	 	d_nodes,
-	 	d_startIdx,
-	 	d_endIdx,
+	 	num_leaves/arities[1],
 	 	d_arities,
+	 	d_offsets,
 	 	height,
 	 	d_message
 	);
 	cudaDeviceSynchronize();
-	cudaMemcpy(nodes,d_nodes,(endIdx[0]+1)*sizeof(m_node),
+	cudaMemcpy(nodes,d_nodes,(num_leaves/arities[1])*sizeof(m_node),
 		cudaMemcpyDeviceToHost);
 	
 	printHash(nodes[0].hash);
-	//printTree(nodes,startIdx,endIdx,height);
 
 
 	cudaFree(d_nodes);
 	cudaFree(d_message);
-	cudaFree(d_endIdx);
-	cudaFree(d_startIdx);
+	cudaFree(d_offsets);
 	cudaFree(d_arities);
 	free(nodes);
 	return 0;
