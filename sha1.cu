@@ -57,7 +57,7 @@ typedef struct
 
 /* Hash a single 512-bit block. This is the core of the algorithm. */
 
-__device__ void SHA1Transform(
+__host__ __device__ void SHA1Transform(
     uint32_t state[5],
     const unsigned char buffer[64]
 )
@@ -185,7 +185,7 @@ __device__ void SHA1Transform(
 
 /* SHA1Init - Initialize new context */
 
-__device__ void SHA1Init(
+__host__ __device__ void SHA1Init(
     SHA1_CTX * context
 )
 {
@@ -201,7 +201,7 @@ __device__ void SHA1Init(
 
 /* Run your data through this. */
 
-__device__ void SHA1Update(
+__host__ __device__ void SHA1Update(
     SHA1_CTX * context,
     const unsigned char *data,
     uint32_t len
@@ -234,7 +234,7 @@ __device__ void SHA1Update(
 
 /* Add padding and return the message digest. */
 
-__device__ void SHA1Final(
+__host__ __device__ void SHA1Final(
     unsigned char digest[20],
     SHA1_CTX * context
 )
@@ -285,7 +285,7 @@ __device__ void SHA1Final(
     memset(&finalcount, '\0', sizeof(finalcount));
 }
 
-__device__ void SHA1(
+__host__ __device__ void SHA1(
     unsigned char *hash_out,
     const unsigned char *str,
     int len)

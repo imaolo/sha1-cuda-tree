@@ -1,16 +1,13 @@
 #include <stdio.h>
 #include <time.h>
 #include "sha1.cu"
+#include "tree.cu"
 
 #define MESSAGE_SIZE 1
 #define HASH_SIZE 20
 #define MAX_ARITY 3
 
 typedef unsigned char UCHAR;
-struct node {
-	UCHAR hash[HASH_SIZE];
-};
-typedef struct node m_node;
 
 
 void printHash(const UCHAR *hash){
@@ -34,7 +31,6 @@ void hashTreeP
 	UCHAR buffer[HASH_SIZE*MAX_ARITY];
 	uint16_t thread = threadIdx.x;
 	uint16_t block_size = blockDim.x;
-
 	for (uint64_t idx=thread; idx<N; idx+=block_size){
 		for (uint8_t i=0;i<arities[1];i++)
 			SHA1((buffer+(i*HASH_SIZE)),message,MESSAGE_SIZE);
@@ -64,75 +60,73 @@ int main(int argc,char **argv){
 		return 0;
 	}	
 
-	//calculate the arities
-	const uint64_t num_blocks = atoi(argv[1]);
-	const uint8_t  height     = ceil(log10(num_blocks)/log10(3));
-	const uint8_t  num_twos   = log10(num_blocks/pow(3,height))/log10(2.0f/3.0f);
-	const uint8_t  num_threes = height - num_twos;
-	const uint64_t num_leaves = pow(2,num_twos) * pow(3,num_threes);
-	uint8_t  arities[height+1];
-	arities[0] = 0;
-	for (uint8_t i = 1;i<=num_threes;i++)
-		arities[i] = 3;
-	for (uint8_t i = num_threes+1;i<=height;i++)
-		arities[i] = 2;
-	//determine the offsets
-	//they are is used to interleave addresses
-	uint64_t offsets[height+1];
-	offsets[1] = 1;
-	for (uint8_t i=2;i<=height;i++)
-		offsets[i] = arities[i]*offsets[i-1];
-	//create the message string
-	UCHAR message[MESSAGE_SIZE];
-	for (int i=0;i<MESSAGE_SIZE;i++)
-		message[i] = 'a';
-	//create the nodes tree and initialize nodes
-	m_node *nodes = (m_node*)malloc((num_leaves/arities[1])*sizeof(m_node));
+	//configure tree
+	m_tree h_tree;
+	m_tree d_tree;
+	configureOptimizedTree(&h_tree,atoi(argv[1]),MESSAGE_SIZE);
+	h_tree.nodes = (m_node *)malloc(sizeof(m_node)*(h_tree.endIdx[0]+1));
 
-	//allocate CudaMemory
-	m_node   *d_nodes;
-	UCHAR    *d_message;
-	uint8_t  *d_arities;
-	uint64_t *d_offsets;
-
-	cudaMalloc(&d_message,MESSAGE_SIZE*sizeof(UCHAR));
-	cudaMemcpy(d_message, message,MESSAGE_SIZE*sizeof(UCHAR),
+	//allocate cuda memory
+	d_tree.height = h_tree.height;
+	d_tree.messageSize  = h_tree.messageSize;
+	cudaMalloc(&d_tree.message,MESSAGE_SIZE*sizeof(UCHAR));
+	cudaMemcpy(
+		d_tree.message, 
+		h_tree.message,
+		MESSAGE_SIZE*sizeof(UCHAR),
 		cudaMemcpyHostToDevice);
 
-	cudaMalloc(&d_nodes,(num_leaves/arities[1])*sizeof(m_node));
+	cudaMalloc(&d_tree.nodes,(h_tree.endIdx[1]-h_tree.startIdx[1]+1)*sizeof(m_node));
 
-	cudaMalloc(&d_arities,(height+1)*sizeof(uint8_t));
-	cudaMemcpy(d_arities,arities,(height+1)*sizeof(uint8_t),
-		cudaMemcpyHostToDevice);
+	cudaMalloc(&d_tree.arities,(h_tree.height+1)*sizeof(uint8_t));
+	cudaMemcpy(
+		d_tree.arities,
+		h_tree.arities,
+		(h_tree.height+1)*sizeof(uint8_t),
+		cudaMemcpyHostToDevice
+	);
 
-	cudaMalloc(&d_offsets,(height+1)*sizeof(uint64_t));
-	cudaMemcpy(d_offsets,offsets,(height+1)*sizeof(uint64_t),
-		cudaMemcpyHostToDevice);
+	cudaMalloc(&d_tree.offsets,(h_tree.height+1)*sizeof(uint64_t));
+	cudaMemcpy(
+			d_tree.offsets,
+			h_tree.offsets,
+			(h_tree.height+1)*sizeof(uint64_t),
+			cudaMemcpyHostToDevice
+	);
 
 	//execute kernel function and extract the memory
+	uint64_t N = h_tree.endIdx[1] - h_tree.startIdx[1] + 1;
 	printf("Invoking Kernel\n");
 	double start = clock();
 	hashTreeP<<<1, 1024>>>(
-	 	d_nodes,
-	 	num_leaves/arities[1],
-	 	d_arities,
-	 	d_offsets,
-	 	height,
-	 	d_message
+	 	d_tree.nodes,
+	 	N,
+	 	d_tree.arities,
+	 	d_tree.offsets,
+	 	d_tree.height,
+	 	d_tree.message
 	);
 	cudaDeviceSynchronize();
-	printf("seconds: %4lf\n",(clock()-start)/CLOCKS_PER_SEC);
-	cudaMemcpy(nodes,d_nodes,(num_leaves/arities[1])*sizeof(m_node),
+	printf("gpu seconds: %4lf\n",(clock()-start)/CLOCKS_PER_SEC);
+	unsigned char d_merkle_root[HASH_SIZE];
+	cudaMemcpy(
+		d_merkle_root,
+		d_tree.nodes[0].hash,
+		HASH_SIZE*sizeof(unsigned char),
 		cudaMemcpyDeviceToHost);
-	
-	
-	printHash(nodes[0].hash);
+
+	start = clock();
+	hashTreeS(&h_tree);
+	printf("cpu seconds: %4lf\n",(clock()-start)/CLOCKS_PER_SEC);
+
+	printHash(d_merkle_root);
+	printHash(h_tree.nodes[0].hash);
 
 
-	cudaFree(d_nodes);
-	cudaFree(d_message);
-	cudaFree(d_offsets);
-	cudaFree(d_arities);
-	free(nodes);
+	cudaFree(d_tree.nodes);
+	cudaFree(d_tree.message);
+	cudaFree(d_tree.offsets);
+	cudaFree(d_tree.arities);
+	freeTree(&h_tree);
 	return 0;
 }
