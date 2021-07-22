@@ -49,7 +49,8 @@ void configureTree(m_tree *tree)
 
 //allocates memory for tree struct data
 //computes tree struct's parameter data
-void createOptimizedTree(
+void createOptimizedTree
+(
 	m_tree* tree,
 	uint64_t numBlocks,
 	uint64_t messageSize
@@ -80,7 +81,8 @@ void createOptimizedTree(
 	for (uint64_t i=0;i<messageSize;i++)
 		tree->message[i] = 'a';
 }
-void createBinaryTree(
+void createBinaryTree
+(
 	m_tree* tree,
 	uint64_t numBlocks,
 	uint64_t messageSize
