@@ -63,7 +63,7 @@ int main(int argc,char **argv){
 	//configure tree
 	m_tree h_tree;
 	m_tree d_tree;
-	configureOptimizedTree(&h_tree,atoi(argv[1]),MESSAGE_SIZE);
+	configureBinaryTree(&h_tree,atoi(argv[1]),MESSAGE_SIZE);
 	h_tree.nodes = (m_node *)malloc(sizeof(m_node)*(h_tree.endIdx[0]+1));
 
 	//allocate cuda memory

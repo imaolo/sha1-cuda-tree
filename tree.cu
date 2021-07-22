@@ -41,7 +41,6 @@ void configureOptimizedTree(
 	tree->height        = ceil(log10(numBlocks)/log10(3));
 	uint8_t  num_twos   = log10(numBlocks/pow(3,tree->height))/log10(2.0f/3.0f);
 	uint8_t  num_threes = tree->height - num_twos;
-	uint64_t num_leaves = pow(2,num_twos) * pow(3,num_threes);
 	tree->arities  = (uint8_t  *)malloc((tree->height+1)*sizeof(uint8_t));
 	tree->offsets  = (uint64_t *)malloc((tree->height+1)*sizeof(uint64_t));
 	tree->startIdx = (uint64_t *)malloc((tree->height+1)*sizeof(uint64_t));
@@ -81,6 +80,53 @@ void configureOptimizedTree(
 	for (uint64_t i=0;i<messageSize;i++)
 		tree->message[i] = 'a';
 }
+
+void configureBinaryTree(
+	m_tree* tree,
+	uint64_t numBlocks,
+	uint64_t messageSize
+)
+{
+	tree->messageSize   = messageSize;
+	tree->height        = ceil(log10(numBlocks)/log10(2));
+	tree->arities  = (uint8_t  *)malloc((tree->height+1)*sizeof(uint8_t));
+	tree->offsets  = (uint64_t *)malloc((tree->height+1)*sizeof(uint64_t));
+	tree->startIdx = (uint64_t *)malloc((tree->height+1)*sizeof(uint64_t));
+	tree->endIdx   = (uint64_t *)malloc((tree->height+1)*sizeof(uint64_t));
+	tree->message  = (unsigned char *)malloc(messageSize*sizeof(unsigned char));
+	
+	//fill arities array
+	tree->arities[0] = 0;
+	for (uint8_t i = 1;i<=tree->height;i++)
+		tree->arities[i] = 2;
+
+	//fill offsets array
+	tree->offsets[1] = 1;
+	for (uint8_t i=2;i<=tree->height;i++)
+		tree->offsets[i] = tree->arities[i]*tree->offsets[i-1];
+
+	//fill startIdx and endIdx
+	uint64_t nodes_at_level;
+	for (uint64_t i = tree->height;i>=0; i--){
+		if (i == tree->height){
+			tree->startIdx[i] = 0;
+			nodes_at_level = 1;
+		}
+		else{
+			tree->startIdx[i] = tree->endIdx[i+1] + 1;
+			nodes_at_level = (tree->endIdx[i+1] - tree->startIdx[i+1] + 1) *
+			tree->arities[i+1];
+		}
+		tree->endIdx[i] = tree->startIdx[i] + nodes_at_level - 1;
+		if (i == 0)
+			break;
+	}
+
+	//fill message string - arbitray message
+	for (uint64_t i=0;i<messageSize;i++)
+		tree->message[i] = 'a';
+}
+
 
 void hashTreeS (m_tree *tree)
 {
