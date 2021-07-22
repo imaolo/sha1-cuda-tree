@@ -52,9 +52,8 @@ void hashTreeP
 				}
 				SHA1(nodes[idx].hash,buffer,HASH_SIZE*arities[i]);
 			}
-			__syncthreads();
-
 		}
+		__syncthreads();
 	}
 
 }
