@@ -54,15 +54,17 @@ int main(int argc,char **argv){
 		printf("enter correct arguments\n");
 		return 0;
 	}	
+
+	//define host and device trees;
 	m_tree h_tree;
 	m_tree d_tree;
-
 	//create host tree
 	createBinaryTree(&h_tree,atoi(argv[1]),MESSAGE_SIZE);
 	//copy host tree to device tree
 	cudaCopyTree(&d_tree,&h_tree);
 
 	//gather metrics
+	//gpu kernel
 	uint64_t N = h_tree.endIdx[1] - h_tree.startIdx[1] + 1;
 	printf("Invoking Kernel\n");
 	double start = clock();
@@ -83,8 +85,7 @@ int main(int argc,char **argv){
 		HASH_SIZE*sizeof(unsigned char),
 		cudaMemcpyDeviceToHost
 	);
-
-	
+	//cpu for error eh
 	start = clock();
 	hashTreeS(&h_tree);
 	printf("cpu seconds: %4lf\n",(clock()-start)/CLOCKS_PER_SEC);
