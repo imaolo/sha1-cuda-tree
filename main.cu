@@ -7,15 +7,11 @@
 #define HASH_SIZE 20
 #define MAX_ARITY 3
 
-typedef unsigned char UCHAR;
-
-
-void printHash(const UCHAR *hash){
+void printHash(const unsigned char *hash){
 	for (int i=0;i<HASH_SIZE;i++)
 		printf("%02x",hash[i]);
 	printf("\n");
 }
-
 
 __global__ 
 void hashTreeP 
@@ -25,10 +21,10 @@ void hashTreeP
 	uint8_t  *arities,
 	uint64_t *offsets,
 	uint8_t  height,
-	const UCHAR    *message
+	const unsigned char    *message
 )
 {
-	UCHAR buffer[HASH_SIZE*MAX_ARITY];
+	unsigned char buffer[HASH_SIZE*MAX_ARITY];
 	uint16_t thread = threadIdx.x;
 	uint16_t block_size = blockDim.x;
 	for (uint64_t idx=thread; idx<N; idx+=block_size){
@@ -51,50 +47,22 @@ void hashTreeP
 		}
 		__syncthreads();
 	}
-
 }
 
 int main(int argc,char **argv){
 	if (argc != 2){
-		printf("enter correct args\n");
+		printf("enter correct arguments\n");
 		return 0;
 	}	
-
-	//configure tree
 	m_tree h_tree;
 	m_tree d_tree;
-	configureBinaryTree(&h_tree,atoi(argv[1]),MESSAGE_SIZE);
-	h_tree.nodes = (m_node *)malloc(sizeof(m_node)*(h_tree.endIdx[0]+1));
 
-	//allocate cuda memory
-	d_tree.height = h_tree.height;
-	d_tree.messageSize  = h_tree.messageSize;
-	cudaMalloc(&d_tree.message,MESSAGE_SIZE*sizeof(UCHAR));
-	cudaMemcpy(
-		d_tree.message, 
-		h_tree.message,
-		MESSAGE_SIZE*sizeof(UCHAR),
-		cudaMemcpyHostToDevice);
+	//create host tree
+	createBinaryTree(&h_tree,atoi(argv[1]),MESSAGE_SIZE);
+	//copy host tree to device tree
+	cudaCopyTree(&d_tree,&h_tree);
 
-	cudaMalloc(&d_tree.nodes,(h_tree.endIdx[1]-h_tree.startIdx[1]+1)*sizeof(m_node));
-
-	cudaMalloc(&d_tree.arities,(h_tree.height+1)*sizeof(uint8_t));
-	cudaMemcpy(
-		d_tree.arities,
-		h_tree.arities,
-		(h_tree.height+1)*sizeof(uint8_t),
-		cudaMemcpyHostToDevice
-	);
-
-	cudaMalloc(&d_tree.offsets,(h_tree.height+1)*sizeof(uint64_t));
-	cudaMemcpy(
-			d_tree.offsets,
-			h_tree.offsets,
-			(h_tree.height+1)*sizeof(uint64_t),
-			cudaMemcpyHostToDevice
-	);
-
-	//execute kernel function and extract the memory
+	//gather metrics
 	uint64_t N = h_tree.endIdx[1] - h_tree.startIdx[1] + 1;
 	printf("Invoking Kernel\n");
 	double start = clock();
@@ -113,8 +81,10 @@ int main(int argc,char **argv){
 		d_merkle_root,
 		d_tree.nodes[0].hash,
 		HASH_SIZE*sizeof(unsigned char),
-		cudaMemcpyDeviceToHost);
+		cudaMemcpyDeviceToHost
+	);
 
+	
 	start = clock();
 	hashTreeS(&h_tree);
 	printf("cpu seconds: %4lf\n",(clock()-start)/CLOCKS_PER_SEC);
@@ -122,11 +92,7 @@ int main(int argc,char **argv){
 	printHash(d_merkle_root);
 	printHash(h_tree.nodes[0].hash);
 
-
-	cudaFree(d_tree.nodes);
-	cudaFree(d_tree.message);
-	cudaFree(d_tree.offsets);
-	cudaFree(d_tree.arities);
+	cudaFreeTree(&d_tree);
 	freeTree(&h_tree);
 	return 0;
 }

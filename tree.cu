@@ -6,14 +6,6 @@
 
 #define HASH_SIZE 20
 
-//use the current levels arity
-#define getChildIdx(index,start,end,arity)\
-	((index-start)*arity)+end+1;
-
-//the arity is the parents arity 
-#define getParentIdx(index,start,end,arity)\
-	start - ((end-start+1)/arity - ((index - start)/arity))
-
 typedef struct {
 	unsigned char hash[HASH_SIZE];
 } m_node;
@@ -29,31 +21,9 @@ typedef struct {
 } m_tree;
 
 
-
-//does not allocate space for the nodes, that is algorithm specific
-void configureOptimizedTree(
-	m_tree* tree,
-	uint64_t numBlocks,
-	uint64_t messageSize
-)
+//helper function for createTree functions
+void configureTree(m_tree *tree)
 {
-	tree->messageSize   = messageSize;
-	tree->height        = ceil(log10(numBlocks)/log10(3));
-	uint8_t  num_twos   = log10(numBlocks/pow(3,tree->height))/log10(2.0f/3.0f);
-	uint8_t  num_threes = tree->height - num_twos;
-	tree->arities  = (uint8_t  *)malloc((tree->height+1)*sizeof(uint8_t));
-	tree->offsets  = (uint64_t *)malloc((tree->height+1)*sizeof(uint64_t));
-	tree->startIdx = (uint64_t *)malloc((tree->height+1)*sizeof(uint64_t));
-	tree->endIdx   = (uint64_t *)malloc((tree->height+1)*sizeof(uint64_t));
-	tree->message  = (unsigned char *)malloc(messageSize*sizeof(unsigned char));
-	
-	//fill arities array
-	tree->arities[0] = 0;
-	for (uint8_t i = 1;i<=num_threes;i++)
-		tree->arities[i] = 3;
-	for (uint8_t i = num_threes+1;i<=tree->height;i++)
-		tree->arities[i] = 2;
-
 	//fill offsets array
 	tree->offsets[1] = 1;
 	for (uint8_t i=2;i<=tree->height;i++)
@@ -75,59 +45,126 @@ void configureOptimizedTree(
 		if (i == 0)
 			break;
 	}
-
-	//fill message string - arbitray message
-	for (uint64_t i=0;i<messageSize;i++)
-		tree->message[i] = 'a';
 }
 
-void configureBinaryTree(
+//allocates memory for tree struct data
+//computes tree struct's parameter data
+void createOptimizedTree(
 	m_tree* tree,
 	uint64_t numBlocks,
 	uint64_t messageSize
 )
 {
-	tree->messageSize   = messageSize;
-	tree->height        = ceil(log10(numBlocks)/log10(2));
-	tree->arities  = (uint8_t  *)malloc((tree->height+1)*sizeof(uint8_t));
-	tree->offsets  = (uint64_t *)malloc((tree->height+1)*sizeof(uint64_t));
-	tree->startIdx = (uint64_t *)malloc((tree->height+1)*sizeof(uint64_t));
-	tree->endIdx   = (uint64_t *)malloc((tree->height+1)*sizeof(uint64_t));
-	tree->message  = (unsigned char *)malloc(messageSize*sizeof(unsigned char));
+	tree->messageSize  = messageSize;
+	tree->height       = ceil(log10(numBlocks)/log10(3));
+	uint8_t  numTwos   = log10(numBlocks/pow(3,tree->height))/log10(2.0f/3.0f);
+	uint8_t  numThrees = tree->height - numTwos;
+	tree->arities      = (uint8_t  *)malloc((tree->height+1)*sizeof(uint8_t));
+	tree->offsets      = (uint64_t *)malloc((tree->height+1)*sizeof(uint64_t));
+	tree->startIdx     = (uint64_t *)malloc((tree->height+1)*sizeof(uint64_t));
+	tree->endIdx       = (uint64_t *)malloc((tree->height+1)*sizeof(uint64_t));
+	tree->message      = (unsigned char *)malloc(messageSize*sizeof(unsigned char));
+	
+	//fill arities array
+	tree->arities[0] = 0;
+	for (uint8_t i = 1;i<=numThrees;i++)
+		tree->arities[i] = 3;
+	for (uint8_t i = numThrees+1;i<=tree->height;i++)
+		tree->arities[i] = 2;
+
+	//find offsets, startIDx, endIdx
+	configureTree(tree);
+	tree->nodes = (m_node *)malloc(sizeof(m_node)*(tree->endIdx[0]+1));
+	
+	//fill message string - arbitray message
+	for (uint64_t i=0;i<messageSize;i++)
+		tree->message[i] = 'a';
+}
+void createBinaryTree(
+	m_tree* tree,
+	uint64_t numBlocks,
+	uint64_t messageSize
+)
+{
+	tree->messageSize = messageSize;
+	tree->height      = ceil(log10(numBlocks)/log10(2));
+	tree->arities     = (uint8_t  *)malloc((tree->height+1)*sizeof(uint8_t));
+	tree->offsets     = (uint64_t *)malloc((tree->height+1)*sizeof(uint64_t));
+	tree->startIdx    = (uint64_t *)malloc((tree->height+1)*sizeof(uint64_t));
+	tree->endIdx      = (uint64_t *)malloc((tree->height+1)*sizeof(uint64_t));
+	tree->message     = (unsigned char *)malloc(messageSize*sizeof(unsigned char));
 	
 	//fill arities array
 	tree->arities[0] = 0;
 	for (uint8_t i = 1;i<=tree->height;i++)
 		tree->arities[i] = 2;
 
-	//fill offsets array
-	tree->offsets[1] = 1;
-	for (uint8_t i=2;i<=tree->height;i++)
-		tree->offsets[i] = tree->arities[i]*tree->offsets[i-1];
-
-	//fill startIdx and endIdx
-	uint64_t nodes_at_level;
-	for (uint64_t i = tree->height;i>=0; i--){
-		if (i == tree->height){
-			tree->startIdx[i] = 0;
-			nodes_at_level = 1;
-		}
-		else{
-			tree->startIdx[i] = tree->endIdx[i+1] + 1;
-			nodes_at_level = (tree->endIdx[i+1] - tree->startIdx[i+1] + 1) *
-			tree->arities[i+1];
-		}
-		tree->endIdx[i] = tree->startIdx[i] + nodes_at_level - 1;
-		if (i == 0)
-			break;
-	}
+	//find offsets, startIDx, endIdx
+	configureTree(tree);
+	tree->nodes = (m_node *)malloc(sizeof(m_node)*(tree->endIdx[0]+1));
 
 	//fill message string - arbitray message
 	for (uint64_t i=0;i<messageSize;i++)
 		tree->message[i] = 'a';
 }
 
+//allocates cuda memory for the device tree
+//and copies host tree to cuda memory
+void cudaCopyTree(m_tree *d_tree,m_tree *h_tree)
+{
+	d_tree->height       = h_tree->height;
+	d_tree->messageSize  = h_tree->messageSize;
+	cudaMalloc(&d_tree->message,d_tree->messageSize*sizeof(char));
+	cudaMemcpy(
+		d_tree->message, 
+		h_tree->message,
+		d_tree->messageSize*sizeof(char),
+		cudaMemcpyHostToDevice);
 
+	cudaMalloc(&d_tree->nodes,(h_tree->endIdx[1]-h_tree->startIdx[1]+1)*sizeof(m_node));
+
+	cudaMalloc(&d_tree->arities,(h_tree->height+1)*sizeof(char));
+	cudaMemcpy(
+		d_tree->arities,
+		h_tree->arities,
+		(h_tree->height+1)*sizeof(uint8_t),
+		cudaMemcpyHostToDevice
+	);
+
+	cudaMalloc(&d_tree->offsets,(h_tree->height+1)*sizeof(uint64_t));
+	cudaMemcpy(
+			d_tree->offsets,
+			h_tree->offsets,
+			(h_tree->height+1)*sizeof(uint64_t),
+			cudaMemcpyHostToDevice
+	);
+}
+
+
+void freeTree(m_tree *tree)
+{
+	free(tree->nodes);
+	free(tree->arities);
+	free(tree->offsets);
+	free(tree->startIdx);
+	free(tree->endIdx);
+	free(tree->message);
+}
+void cudaFreeTree(m_tree *tree)
+{
+	cudaFree(tree->nodes);
+	cudaFree(tree->message);
+	cudaFree(tree->offsets);
+	cudaFree(tree->arities);
+}
+
+//use the current levels arity
+#define getChildIdx(index,start,end,arity)\
+	((index-start)*arity)+end+1;
+
+//the arity is the parents arity 
+#define getParentIdx(index,start,end,arity)\
+	start - ((end-start+1)/arity - ((index - start)/arity))
 void hashTreeS (m_tree *tree)
 {
 	unsigned char *tmp = (unsigned char*)malloc(HASH_SIZE*3*sizeof(unsigned char));
@@ -146,15 +183,6 @@ void hashTreeS (m_tree *tree)
 	free(tmp);
 }
 
-void freeTree(m_tree *tree)
-{
-	free(tree->nodes);
-	free(tree->arities);
-	free(tree->offsets);
-	free(tree->startIdx);
-	free(tree->endIdx);
-	free(tree->message);
-}
 
 void Print(const unsigned char *message, uint16_t n)
 {
