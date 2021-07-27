@@ -6,10 +6,12 @@
 
 #define HASH_SIZE 20
 
-typedef struct {
+typedef struct
+{
 	unsigned char hash[HASH_SIZE];
 } m_node;
-typedef struct {
+typedef struct 
+{
 	m_node *nodes;
 	uint8_t *arities;
 	uint64_t *offsets;
@@ -21,7 +23,7 @@ typedef struct {
 } m_tree;
 
 
-//helper function for createTree functions
+//helper function for create*Tree functions
 void configureTree(m_tree *tree)
 {
 	//fill offsets array
@@ -160,10 +162,12 @@ void cudaFreeTree(m_tree *tree)
 	cudaFree(tree->arities);
 }
 
+
+//a serial merkle root generator for error checking
+//the macros are used only in hashTreeS
 //use the current levels arity
 #define getChildIdx(index,start,end,arity)\
 	((index-start)*arity)+end+1;
-
 //the arity is the parents arity 
 #define getParentIdx(index,start,end,arity)\
 	start - ((end-start+1)/arity - ((index - start)/arity))

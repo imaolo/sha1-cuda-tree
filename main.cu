@@ -7,13 +7,20 @@
 #define HASH_SIZE 20
 #define MAX_ARITY 3
 
-void printHash(const unsigned char *hash){
+#define FILE_NAME "results.csv"
+
+
+//prints HASH_SIZE charcters of the string in HEX form
+void printHash(const unsigned char *hash)
+{
 	for (int i=0;i<HASH_SIZE;i++)
 		printf("%02x",hash[i]);
 	printf("\n");
 }
 
-uint8_t cmpHash(
+//compares two hash strings. 0 for unequal, 1 for equal
+uint8_t cmpHash
+(
 	const unsigned char *a_hash,
 	const unsigned char *b_hash
 )
@@ -25,6 +32,9 @@ uint8_t cmpHash(
 	return 1;
 }
 
+
+//parallel, GPU implementation of the merkle tree
+//capable of generating merkle roots of the variable tree modes 
 __global__ 
 void hashTreeP 
 (
@@ -39,6 +49,8 @@ void hashTreeP
 	unsigned char buffer[HASH_SIZE*MAX_ARITY];
 	uint16_t thread = threadIdx.x;
 	uint16_t block_size = blockDim.x;
+
+	//calculate the message's hash
 	for (uint64_t idx=thread; idx<N; idx+=block_size){
 		for (uint8_t i=0;i<arities[1];i++)
 			SHA1((buffer+(i*HASH_SIZE)),message,MESSAGE_SIZE);
@@ -46,6 +58,8 @@ void hashTreeP
 	}
 	__syncthreads();
 
+	//parallel reduction begins, only one child will proceed
+	//through each height level
 	for (uint8_t i=2;i<=height;i++){
 		for (uint64_t idx=thread;idx<N;idx+=block_size){
 			if (idx%offsets[i]==0){
@@ -61,6 +75,9 @@ void hashTreeP
 	}
 }
 
+
+//returns the time taken to compute the merkle root of the tree
+//returns -1 if the trees are not equal
 __host__ double testTree(m_tree *h_tree,m_tree *d_tree)
 {
 	//timing variables;
@@ -93,26 +110,29 @@ __host__ double testTree(m_tree *h_tree,m_tree *d_tree)
 	return total_t;
 }
 
-int main(int argc,char **argv){
+int main(int argc,char **argv)
+{
 	//extracting arguments
 	if (argc != 2){
 		printf("enter correct arguments\n");
 		return 0;
 	}
-	uint64_t maxBlocks = atoi(argv[1]);
-	if (maxBlocks < 10){
+	if (atoi(argv[1]) <  10){
 		printf("Enter a greater max blocks\n");
 		return 0;
 	}
+	const uint64_t maxBlocks = atoi(argv[1]);
+
+
 
 	//define host and device trees;
 	m_tree h_tree;
 	m_tree d_tree;
+	//timing varible
+	double runtime;
 
 	//collect timing metrics
 	for (uint64_t numBlocks = 10;numBlocks<maxBlocks;numBlocks+=25){
-		//timing varible
-		double runtime;
 		//Binary tree
 			//create host tree
 		createBinaryTree(&h_tree,numBlocks,MESSAGE_SIZE);
@@ -133,6 +153,7 @@ int main(int argc,char **argv){
 			//free the trees
 		cudaFreeTree(&d_tree);
 		freeTree(&h_tree);
+
 		//Optimized tree
 			//create host tree
 		createOptimizedTree(&h_tree,numBlocks,MESSAGE_SIZE);
