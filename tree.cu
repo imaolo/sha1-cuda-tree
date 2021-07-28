@@ -112,8 +112,8 @@ void createBinaryTree
 		tree->message[i] = 'a';
 }
 
-//allocates cuda memory for the device tree
-//and copies host tree to cuda memory
+
+//memory management functions
 void cudaCopyTree(m_tree *d_tree,m_tree *h_tree)
 {
 	d_tree->height       = h_tree->height;
@@ -143,8 +143,6 @@ void cudaCopyTree(m_tree *d_tree,m_tree *h_tree)
 			cudaMemcpyHostToDevice
 	);
 }
-
-
 void freeTree(m_tree *tree)
 {
 	free(tree->nodes);
@@ -160,6 +158,48 @@ void cudaFreeTree(m_tree *tree)
 	cudaFree(tree->message);
 	cudaFree(tree->offsets);
 	cudaFree(tree->arities);
+}
+
+//parallel, GPU implementation of the merkle tree
+//capable of generating merkle roots of the variable tree modes 
+__global__ 
+void hashTreeP 
+(
+	m_node   *nodes,
+	uint64_t N,
+	uint8_t  *arities,
+	uint64_t *offsets,
+	uint8_t  height,
+	const unsigned char    *message
+)
+{
+	unsigned char buffer[HASH_SIZE*MAX_ARITY];
+	uint16_t thread = threadIdx.x;
+	uint16_t block_size = blockDim.x;
+
+	//calculate the message's hash
+	for (uint64_t idx=thread; idx<N; idx+=block_size){
+		for (uint8_t i=0;i<arities[1];i++)
+			SHA1((buffer+(i*HASH_SIZE)),message,MESSAGE_SIZE);
+		SHA1(nodes[idx].hash,buffer,HASH_SIZE*arities[1]);
+	}
+	__syncthreads();
+
+	//parallel reduction begins, only one child will proceed
+	//through each height level
+	for (uint8_t i=2;i<=height;i++){
+		for (uint64_t idx=thread;idx<N;idx+=block_size){
+			if (idx%offsets[i]==0){
+				for (uint8_t j=0;j<arities[i];j++){
+					memcpy((buffer+(j*HASH_SIZE)),
+							nodes[idx+j*offsets[i-1]].hash,
+							HASH_SIZE);
+				}
+				SHA1(nodes[idx].hash,buffer,HASH_SIZE*arities[i]);
+			}
+		}
+		__syncthreads();
+	}
 }
 
 
@@ -187,25 +227,5 @@ void hashTreeS (m_tree *tree)
 		}
 	}
 	free(tmp);
-}
-
-
-void Print(const unsigned char *message, uint16_t n)
-{
-	for (int i=0;i<n;i++)
-		printf("%02x",message[i]);
-	printf("\n");
-}
-void printTree(m_tree *tree)
-{
-	for (uint8_t i=tree->height;i>=0;i--){
-		printf("level: %d\n", i);
-		printf("nodes: %ld\n", tree->endIdx[i] - tree->startIdx[i] + 1);
-		for (uint64_t j=tree->startIdx[i];j<=tree->endIdx[i];j++)
-			Print(tree->nodes[j].hash,HASH_SIZE);
-		printf("\n");
-		if (i == 0)
-			return;
-	}
 }
 

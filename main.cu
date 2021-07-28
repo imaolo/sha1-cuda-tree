@@ -33,49 +33,6 @@ uint8_t cmpHash
 }
 
 
-//parallel, GPU implementation of the merkle tree
-//capable of generating merkle roots of the variable tree modes 
-__global__ 
-void hashTreeP 
-(
-	m_node   *nodes,
-	uint64_t N,
-	uint8_t  *arities,
-	uint64_t *offsets,
-	uint8_t  height,
-	const unsigned char    *message
-)
-{
-	unsigned char buffer[HASH_SIZE*MAX_ARITY];
-	uint16_t thread = threadIdx.x;
-	uint16_t block_size = blockDim.x;
-
-	//calculate the message's hash
-	for (uint64_t idx=thread; idx<N; idx+=block_size){
-		for (uint8_t i=0;i<arities[1];i++)
-			SHA1((buffer+(i*HASH_SIZE)),message,MESSAGE_SIZE);
-		SHA1(nodes[idx].hash,buffer,HASH_SIZE*arities[1]);
-	}
-	__syncthreads();
-
-	//parallel reduction begins, only one child will proceed
-	//through each height level
-	for (uint8_t i=2;i<=height;i++){
-		for (uint64_t idx=thread;idx<N;idx+=block_size){
-			if (idx%offsets[i]==0){
-				for (uint8_t j=0;j<arities[i];j++){
-					memcpy((buffer+(j*HASH_SIZE)),
-							nodes[idx+j*offsets[i-1]].hash,
-							HASH_SIZE);
-				}
-				SHA1(nodes[idx].hash,buffer,HASH_SIZE*arities[i]);
-			}
-		}
-		__syncthreads();
-	}
-}
-
-
 //returns the time taken to compute the merkle root of the tree
 //returns -1 if the trees are not equal
 __host__ double testTree(m_tree *h_tree,m_tree *d_tree)
@@ -138,7 +95,7 @@ int main(int argc,char **argv)
 
 	//collect timing metrics
 	for (uint64_t numBlocks = 10;numBlocks<maxBlocks;numBlocks+=25){
-		of = fopen(FILE_NAME,"w");
+		of = fopen(FILE_NAME,"a");
 		fprintf(of,"%ld,",numBlocks);
 		fclose(of);
 		//Binary tree
@@ -154,7 +111,7 @@ int main(int argc,char **argv)
 			return 0;
 		}
 		else{
-			of = fopen(FILE_NAME,"w");
+			of = fopen(FILE_NAME,"a");
 			fprintf(of,"%lf,",runtime);
 			fclose(of);
 		}
@@ -175,7 +132,7 @@ int main(int argc,char **argv)
 			return 0;
 		}
 		else{
-			of = fopen(FILE_NAME,"w");
+			of = fopen(FILE_NAME,"a");
 			fprintf(of,"%lf\n",runtime);
 			fclose(of);
 		}
