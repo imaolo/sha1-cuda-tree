@@ -123,9 +123,14 @@ int main(int argc,char **argv)
 	}
 	const uint64_t maxBlocks = atoi(argv[1]);
 
+	//configure output file
+	FILE *of;
+	of = fopen(FILE_NAME,"w");
+	fprintf(of,"Optimized vs Binary Merkle Tree Modes\n\n");
+	fprintf(of,"Blocks, Binary Time, Optimized Time\n");
+	fclose(of);
 
-
-	//define host and device trees;
+	//host and device trees;
 	m_tree h_tree;
 	m_tree d_tree;
 	//timing varible
@@ -133,6 +138,9 @@ int main(int argc,char **argv)
 
 	//collect timing metrics
 	for (uint64_t numBlocks = 10;numBlocks<maxBlocks;numBlocks+=25){
+		of = fopen(FILE_NAME,"w");
+		fprintf(of,"%ld,",numBlocks);
+		fclose(of);
 		//Binary tree
 			//create host tree
 		createBinaryTree(&h_tree,numBlocks,MESSAGE_SIZE);
@@ -146,9 +154,9 @@ int main(int argc,char **argv)
 			return 0;
 		}
 		else{
-			printf("Binary Tree\n");
-			printf("numBlocks: %ld\n",numBlocks);
-			printf("runTime: %lf\n\n",runtime);
+			of = fopen(FILE_NAME,"w");
+			fprintf(of,"%lf,",runtime);
+			fclose(of);
 		}
 			//free the trees
 		cudaFreeTree(&d_tree);
@@ -167,9 +175,9 @@ int main(int argc,char **argv)
 			return 0;
 		}
 		else{
-			printf("optimized Tree\n");
-			printf("numBlocks: %ld\n",numBlocks);
-			printf("runTime: %lf\n\n",runtime);
+			of = fopen(FILE_NAME,"w");
+			fprintf(of,"%lf\n",runtime);
+			fclose(of);
 		}
 			//free the trees
 		cudaFreeTree(&d_tree);
