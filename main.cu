@@ -74,6 +74,27 @@ void hashTreeP
 	}
 }
 
+int checkArguments(int argc,char **argv)
+{
+	//extracting arguments
+	if (argc != 4){
+		printf("enter correct arguments\n");
+		return -1;
+	}
+	if (atoi(argv[1]) <  10){
+		printf("Enter a greater start block\n");
+		return -1;
+	}
+	if (atoi(argv[2]) < atoi(argv[1])){
+		printf("end blocks less than start blocks\n");
+		return -1;
+	}
+	if (atoi(argv[3]) <= 0){
+		printf("enter a greater granularity\n");
+		return -1;
+	}
+	return 1;
+}
 
 
 //returns the time taken to compute the merkle root of the tree
@@ -112,16 +133,12 @@ __host__ double testTree(m_tree *h_tree,m_tree *d_tree)
 
 int main(int argc,char **argv)
 {
-	//extracting arguments
-	if (argc != 2){
-		printf("enter correct arguments\n");
+	if (!checkArguments(argc,argv))
 		return 0;
-	}
-	if (atoi(argv[1]) <  10){
-		printf("Enter a greater max blocks\n");
-		return 0;
-	}
-	const uint64_t maxBlocks = atoi(argv[1]);
+
+	const uint64_t startBlocks = atoi(argv[1]);
+	const uint64_t endBlocks   = atoi(argv[2]);
+	const uint64_t granularity = atoi(argv[3]);
 
 	//configure output file
 	FILE *of;
@@ -137,13 +154,13 @@ int main(int argc,char **argv)
 	double runtime;
 
 	//collect timing metrics
-	for (uint64_t numBlocks = 10;numBlocks<maxBlocks;numBlocks+=25){
+	for (uint64_t i = startBlocks;i<endBlocks;i+=granularity){
 		of = fopen(FILE_NAME,"a");
-		fprintf(of,"%ld,",numBlocks);
+		fprintf(of,"%ld,",i);
 		fclose(of);
 		//Binary tree
 			//create host tree
-		createBinaryTree(&h_tree,numBlocks,MESSAGE_SIZE);
+		createBinaryTree(&h_tree,i,MESSAGE_SIZE);
 			//copy host tree to device tree
 		cudaCopyTree(&d_tree,&h_tree);
 			//test the tree for speed and correctness
@@ -164,7 +181,7 @@ int main(int argc,char **argv)
 
 		//Optimized tree
 			//create host tree
-		createOptimizedTree(&h_tree,numBlocks,MESSAGE_SIZE);
+		createOptimizedTree(&h_tree,i,MESSAGE_SIZE);
 			//copy host tree to device tree
 		cudaCopyTree(&d_tree,&h_tree);
 			//test the tree for speed and correctness
