@@ -23,6 +23,28 @@ typedef struct
 } m_tree;
 
 
+//prints HASH_SIZE charcters of the string in HEX form
+void printHash(const unsigned char *hash)
+{
+	for (int i=0;i<HASH_SIZE;i++)
+		printf("%02x",hash[i]);
+	printf("\n");
+}
+
+//compares two hash strings. 0 for unequal, 1 for equal
+uint8_t cmpHash
+(
+	const unsigned char *a_hash,
+	const unsigned char *b_hash
+)
+{
+	for(int i=0;i<HASH_SIZE;i++){
+		if (a_hash[i] != b_hash[i])
+			return 0;
+	}
+	return 1;
+}
+
 //helper function for create*Tree functions
 void configureTree(m_tree *tree)
 {

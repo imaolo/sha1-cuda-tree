@@ -10,28 +10,6 @@
 #define FILE_NAME "results.csv"
 
 
-//prints HASH_SIZE charcters of the string in HEX form
-void printHash(const unsigned char *hash)
-{
-	for (int i=0;i<HASH_SIZE;i++)
-		printf("%02x",hash[i]);
-	printf("\n");
-}
-
-//compares two hash strings. 0 for unequal, 1 for equal
-uint8_t cmpHash
-(
-	const unsigned char *a_hash,
-	const unsigned char *b_hash
-)
-{
-	for(int i=0;i<HASH_SIZE;i++){
-		if (a_hash[i] != b_hash[i])
-			return 0;
-	}
-	return 1;
-}
-
 //parallel, GPU implementation of the merkle tree
 //capable of generating merkle roots of the variable tree modes 
 __global__ 
@@ -77,7 +55,7 @@ void hashTreeP
 int checkArguments(int argc,char **argv)
 {
 	//extracting arguments
-	if (argc != 4){
+	if (argc != 5){
 		printf("enter correct arguments\n");
 		return -1;
 	}
@@ -93,43 +71,13 @@ int checkArguments(int argc,char **argv)
 		printf("enter a greater granularity\n");
 		return -1;
 	}
+	if (atoi(argv[4]) <= 0){
+		printf("enter a greater number of tests\n");
+		return -1;
+	}
 	return 1;
 }
 
-
-//returns the time taken to compute the merkle root of the tree
-//returns -1 if the trees are not equal
-__host__ double testTree(m_tree *h_tree,m_tree *d_tree)
-{
-	//timing variables;
-	clock_t start_t;
-	double total_t;
-	//invoke kernel
-	start_t = clock();
-	hashTreeP<<<1, 1024>>>(
-	 	d_tree->nodes,
-	 	h_tree->endIdx[1] - h_tree->startIdx[1] + 1,
-	 	d_tree->arities,
-	 	d_tree->offsets,
-	 	d_tree->height,
-	 	d_tree->message
-	);
-	cudaDeviceSynchronize();
-	total_t = (double)(clock() - start_t)/CLOCKS_PER_SEC;
-	//error checking
-	unsigned char d_merkle_root[HASH_SIZE];
-	cudaMemcpy(
-		d_merkle_root,
-		d_tree->nodes[0].hash,
-		HASH_SIZE*sizeof(unsigned char),
-		cudaMemcpyDeviceToHost
-	);
-	hashTreeS(h_tree);
-	if (!cmpHash(d_merkle_root,h_tree->nodes[0].hash))
-		return -1.0f;
-
-	return total_t;
-}
 
 int main(int argc,char **argv)
 {
@@ -139,6 +87,7 @@ int main(int argc,char **argv)
 	const uint64_t startBlocks = atoi(argv[1]);
 	const uint64_t endBlocks   = atoi(argv[2]);
 	const uint64_t granularity = atoi(argv[3]);
+	const uint64_t numTests    = atoi(argv[4]);
 
 	//configure output file
 	FILE *of;
@@ -150,55 +99,68 @@ int main(int argc,char **argv)
 	//host and device trees;
 	m_tree h_tree;
 	m_tree d_tree;
-	//timing varible
-	double runtime;
 
 	//collect timing metrics
+	double start_t;
+	double total_t;
 	for (uint64_t i = startBlocks;i<endBlocks;i+=granularity){
 		of = fopen(FILE_NAME,"a");
-		fprintf(of,"%ld,",i);
+		fprintf(of,"%ld,  ",i);
 		fclose(of);
+
 		//Binary tree
-			//create host tree
-		createBinaryTree(&h_tree,i,MESSAGE_SIZE);
-			//copy host tree to device tree
-		cudaCopyTree(&d_tree,&h_tree);
-			//test the tree for speed and correctness
-		if ((runtime = testTree(&h_tree,&d_tree)) < 0){
-			printf("FAILED\n");
+		total_t = 0;
+		for (uint64_t j=0;j<numTests;j++){
+				//create host tree
+			createBinaryTree(&h_tree,i,MESSAGE_SIZE);
+				//copy host tree to device tree
+			cudaCopyTree(&d_tree,&h_tree);
+				//measure kernel execution time
+			start_t = clock();
+			hashTreeP<<<1, 1024>>>(
+	 			d_tree.nodes,
+	 			h_tree.endIdx[1] - h_tree.startIdx[1] + 1,
+	 			d_tree.arities,
+	 			d_tree.offsets,
+	 			d_tree.height,
+	 			d_tree.message
+			);
+			cudaDeviceSynchronize();
+			total_t += (double)(clock() - start_t)/CLOCKS_PER_SEC;
+				//free the trees
 			cudaFreeTree(&d_tree);
 			freeTree(&h_tree);
-			return 0;
 		}
-		else{
-			of = fopen(FILE_NAME,"a");
-			fprintf(of,"%lf,",runtime);
-			fclose(of);
-		}
-			//free the trees
-		cudaFreeTree(&d_tree);
-		freeTree(&h_tree);
+		of = fopen(FILE_NAME,"a");
+		fprintf(of,"%lf,  ",total_t/numTests);
+		fclose(of);
 
 		//Optimized tree
-			//create host tree
-		createOptimizedTree(&h_tree,i,MESSAGE_SIZE);
-			//copy host tree to device tree
-		cudaCopyTree(&d_tree,&h_tree);
-			//test the tree for speed and correctness
-		if ((runtime = testTree(&h_tree,&d_tree)) < 0){
-			printf("FAILED\n");
+		total_t = 0;
+		for (uint64_t j=0;j<numTests;j++){
+				//create host tree
+			createOptimizedTree(&h_tree,i,MESSAGE_SIZE);
+				//copy host tree to device tree
+			cudaCopyTree(&d_tree,&h_tree);
+				//measure kernel execution time
+			start_t = clock();
+			hashTreeP<<<1, 1024>>>(
+	 			d_tree.nodes,
+	 			h_tree.endIdx[1] - h_tree.startIdx[1] + 1,
+	 			d_tree.arities,
+	 			d_tree.offsets,
+	 			d_tree.height,
+	 			d_tree.message
+			);
+			cudaDeviceSynchronize();
+			total_t += (double)(clock() - start_t)/CLOCKS_PER_SEC;
+				//free the trees
 			cudaFreeTree(&d_tree);
 			freeTree(&h_tree);
-			return 0;
 		}
-		else{
-			of = fopen(FILE_NAME,"a");
-			fprintf(of,"%lf\n",runtime);
-			fclose(of);
-		}
-			//free the trees
-		cudaFreeTree(&d_tree);
-		freeTree(&h_tree);
+		of = fopen(FILE_NAME,"a");
+		fprintf(of,"%lf\n",total_t/numTests);
+		fclose(of);
 	}
 	return 0;
 }
